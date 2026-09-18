@@ -176,8 +176,34 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         if settingsWindow == nil {
             preWarmSettings(appState: appState)
         }
+        if appState.isPositioningOverlays {
+            settingsWindow?.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
+            settingsWindow?.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        } else {
+            settingsWindow?.level = .normal
+        }
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Toggles the Preferences window visibility.
+    public func toggleSettings(appState: AppState) {
+        if settingsWindow == nil {
+            preWarmSettings(appState: appState)
+        }
+        guard let window = settingsWindow else { return }
+        if window.isVisible {
+            window.orderOut(nil)
+        } else {
+            if appState.isPositioningOverlays {
+                window.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
+                window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            } else {
+                window.level = .normal
+            }
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 
     private var isProgrammaticUpdate = false

@@ -183,7 +183,7 @@ public struct CaptureSettingsView: View {
 
                 LabeledContent("Backdrop Opacity") {
                     HStack(spacing: 12) {
-                        Slider(value: $appState.currentProfile.backgroundOpacity, in: 0.2...1.0, step: 0.05)
+                        Slider(value: $appState.currentProfile.backgroundOpacity, in: 0.0...1.0, step: 0.05)
                         Text("\(Int(appState.currentProfile.backgroundOpacity * 100))%")
                             .monospacedDigit()
                             .foregroundColor(.secondary)

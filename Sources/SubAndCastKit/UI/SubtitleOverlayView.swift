@@ -31,6 +31,23 @@ public struct SubtitleOverlayView: View {
 
                 Spacer()
 
+                // Settings toggle button
+                Button(action: {
+                    OverlayWindowManager.shared.toggleSettings(appState: appState)
+                }) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "gearshape")
+                        Text("Settings")
+                    }
+                    .font(.system(size: 10, weight: .medium))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.white.opacity(0.2))
+                    .cornerRadius(4)
+                }
+                .buttonStyle(.plain)
+                .pointingHandCursor()
+
                 // Test Translate button
                 Button(action: {
                     triggerTestTranslate()
@@ -137,7 +154,7 @@ public struct SubtitleOverlayView: View {
             if !appState.lastTranslatedText.isEmpty {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
-                    .shadow(color: .black.opacity(0.5), radius: 6, x: 0, y: 3)
+                    .shadow(color: .black.opacity(0.5 * appState.currentProfile.backgroundOpacity), radius: 6, x: 0, y: 3)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(appState.lastTranslatedText)

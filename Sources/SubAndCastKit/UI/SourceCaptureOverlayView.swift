@@ -25,6 +25,23 @@ public struct SourceCaptureOverlayView: View {
 
                     Spacer()
 
+                    // Settings toggle button
+                    Button(action: {
+                        OverlayWindowManager.shared.toggleSettings(appState: appState)
+                    }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "gearshape")
+                            Text("Settings")
+                        }
+                        .font(.system(size: 10, weight: .medium))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.white.opacity(0.2))
+                        .cornerRadius(4)
+                    }
+                    .buttonStyle(.plain)
+                    .pointingHandCursor()
+
                     Button(action: {
                         appState.finishPositioningOverlays()
                     }) {
