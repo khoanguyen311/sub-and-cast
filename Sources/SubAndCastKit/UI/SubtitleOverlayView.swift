@@ -5,6 +5,8 @@ public struct SubtitleOverlayView: View {
     @ObservedObject var appState: AppState
     @State private var opacity: Double = 1.0
     @State private var fadeTimer: AnyCancellable?
+    @State private var isHoveringBody = false
+    @State private var isTesting = false
 
     public init(appState: AppState) {
         self.appState = appState
@@ -12,13 +14,13 @@ public struct SubtitleOverlayView: View {
 
     public var body: some View {
         ZStack(alignment: .topLeading) {
-            // Container box styling in setup mode
+            // Setup-mode border and chrome
             if !appState.isLocked {
                 RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(Color.orange, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
                     .background(Color.orange.opacity(0.05))
 
-                // Header tag
+                // Header toolbar
                 HStack(spacing: 6) {
                     Image(systemName: "captions.bubble")
                         .font(.system(size: 11, weight: .bold))
@@ -26,6 +28,38 @@ public struct SubtitleOverlayView: View {
                         .font(.system(size: 11, weight: .semibold))
 
                     Spacer()
+
+                    // Test Translate button — runs a snapshot + translate immediately
+                    Button(action: {
+                        triggerTestTranslate()
+                    }) {
+                        HStack(spacing: 3) {
+                            if isTesting {
+                                Image(systemName: "arrow.2.circlepath")
+                                    .rotationEffect(.degrees(isTesting ? 360 : 0))
+                                    .animation(.linear(duration: 0.8).repeatForever(autoreverses: false), value: isTesting)
+                            } else {
+                                Image(systemName: "play.circle")
+                            }
+                            Text("Test")
+                        }
+                        .font(.system(size: 10, weight: .medium))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.green.opacity(0.35))
+                        .cornerRadius(4)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isTesting)
+                    .onHover { inside in
+                        if inside {
+                            NSCursor.pointingHand.set()
+                        } else if isHoveringBody {
+                            NSCursor.openHand.set()
+                        } else {
+                            NSCursor.arrow.set()
+                        }
+                    }
 
                     Button(action: {
                         appState.toggleLock()
@@ -41,6 +75,15 @@ public struct SubtitleOverlayView: View {
                         .cornerRadius(4)
                     }
                     .buttonStyle(.plain)
+                    .onHover { inside in
+                        if inside {
+                            NSCursor.pointingHand.set()
+                        } else if isHoveringBody {
+                            NSCursor.openHand.set()
+                        } else {
+                            NSCursor.arrow.set()
+                        }
+                    }
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -70,7 +113,7 @@ public struct SubtitleOverlayView: View {
                         .animation(.easeInOut(duration: 0.3), value: opacity)
                         .padding(8)
                 } else if !appState.isLocked {
-                    Text("Translated subtitles will appear here...")
+                    Text("Translated subtitles will appear here…")
                         .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.white.opacity(0.6))
                         .padding(12)
@@ -85,7 +128,33 @@ public struct SubtitleOverlayView: View {
             opacity = 1.0
             resetFadeTimer()
         }
+        // Show open-hand cursor to hint this zone is draggable
+        .onHover { inside in
+            isHoveringBody = inside
+            if !appState.isLocked {
+                if inside {
+                    NSCursor.openHand.set()
+                } else {
+                    NSCursor.arrow.set()
+                }
+            }
+        }
     }
+
+    // MARK: - Test Translate
+
+    private func triggerTestTranslate() {
+        guard !isTesting else { return }
+        isTesting = true
+        appState.triggerSnapshot()
+
+        // Reset spinner state after a short delay regardless of result
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            isTesting = false
+        }
+    }
+
+    // MARK: - Fade Timer
 
     private func resetFadeTimer() {
         fadeTimer?.cancel()

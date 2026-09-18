@@ -6,15 +6,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarController: MenuBarController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Run as accessory app (menu bar only, no dock icon)
-        NSApp.setActivationPolicy(.accessory)
+        // Show in both Dock and menu bar so the app is easily discoverable
+        NSApp.setActivationPolicy(.regular)
 
         let state = AppState.shared
         self.menuBarController = MenuBarController(appState: state)
         OverlayWindowManager.shared.setupOverlays(appState: state)
+
+        // Open Preferences immediately on first launch
+        OverlayWindowManager.shared.showSettings(appState: state)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // Keep running when user closes Preferences; overlays stay active
         return false
     }
 }

@@ -28,17 +28,15 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundleIdentifier</key>
     <string>com.khoa.subandcast</string>
     <key>CFBundleName</key>
-    <string>$APP_NAME</string>
+    <string>Sub &amp; Cast</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
-    <key>LSUIElement</key>
-    <true/>
     <key>NSScreenCaptureUsageDescription</key>
-    <string>SubAndCast requires screen capture access to perform OCR on dialogue boxes in your games.</string>
+    <string>Sub &amp; Cast requires screen capture access to perform OCR on dialogue boxes in your games.</string>
 </dict>
 </plist>
 EOF

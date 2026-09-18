@@ -2,13 +2,14 @@ import SwiftUI
 
 public struct SourceCaptureOverlayView: View {
     @ObservedObject var appState: AppState
+    @State private var isHoveringBody = false
 
     public init(appState: AppState) {
         self.appState = appState
     }
 
     public var body: some View {
-        GeometryReader { geometry in
+        GeometryReader { _ in
             ZStack(alignment: .topLeading) {
                 // Outer dashed border
                 RoundedRectangle(cornerRadius: 8)
@@ -24,7 +25,7 @@ public struct SourceCaptureOverlayView: View {
                     )
 
                 if !appState.isLocked {
-                    // Header tag
+                    // Header toolbar
                     HStack(spacing: 6) {
                         Image(systemName: "viewfinder")
                             .font(.system(size: 11, weight: .bold))
@@ -53,6 +54,16 @@ public struct SourceCaptureOverlayView: View {
                             .cornerRadius(4)
                         }
                         .buttonStyle(.plain)
+                        // Don't apply openHand cursor to buttons
+                        .onHover { inside in
+                            if inside {
+                                NSCursor.pointingHand.set()
+                            } else if isHoveringBody {
+                                NSCursor.openHand.set()
+                            } else {
+                                NSCursor.arrow.set()
+                            }
+                        }
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -72,6 +83,17 @@ public struct SourceCaptureOverlayView: View {
                                 .padding(4)
                         }
                     }
+                }
+            }
+        }
+        // Show open-hand cursor when hovering the drag zone so it's obvious this area is movable
+        .onHover { inside in
+            isHoveringBody = inside
+            if !appState.isLocked {
+                if inside {
+                    NSCursor.openHand.set()
+                } else {
+                    NSCursor.arrow.set()
                 }
             }
         }

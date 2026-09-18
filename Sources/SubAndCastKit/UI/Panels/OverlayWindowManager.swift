@@ -66,6 +66,35 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
                 self?.updatePanelPositions(from: profile)
             }
             .store(in: &cancellables)
+
+        // Pre-warm settings window so first open is instant — build but do NOT show yet
+        preWarmSettings(appState: appState)
+    }
+
+    // Builds the settings NSWindow and pre-renders its SwiftUI content graph
+    // without showing it, so the first call to showSettings() is lag-free.
+    private func preWarmSettings(appState: AppState) {
+        let window = NSWindow(
+            contentRect: NSRect(x: 200, y: 200, width: 520, height: 600),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Sub & Cast — Preferences"
+        window.center()
+        window.isReleasedWhenClosed = false
+        window.contentView = NSHostingView(rootView: SettingsView(appState: appState))
+        // Do not call makeKeyAndOrderFront — we just want it pre-loaded
+        self.settingsWindow = window
+    }
+
+    /// Shows the Preferences window. Opens on launch and menu bar "Preferences…".
+    public func showSettings(appState: AppState) {
+        if settingsWindow == nil {
+            preWarmSettings(appState: appState)
+        }
+        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     private func updatePanelPositions(from profile: GameProfile) {
@@ -79,28 +108,6 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         let dst = profile.displayRect.cgRect
         let dstAppKit = NSRect(x: dst.origin.x, y: screenHeight - dst.origin.y - dst.height, width: dst.width, height: dst.height)
         subtitlePanel?.setFrame(dstAppKit, display: true)
-    }
-
-    public func showSettings(appState: AppState) {
-        if let existing = settingsWindow {
-            existing.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-
-        let window = NSWindow(
-            contentRect: NSRect(x: 200, y: 200, width: 520, height: 600),
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Sub & Cast - Preferences"
-        window.center()
-        window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: SettingsView(appState: appState))
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        self.settingsWindow = window
     }
 
     // MARK: - NSWindowDelegate
@@ -118,7 +125,7 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
 
         let screenHeight = screen.frame.height
         let frame = window.frame
-        // Convert AppKit (bottom-left) to ScreenCaptureKit / CoreGraphics (top-left)
+        // Convert AppKit (bottom-left origin) to CoreGraphics/ScreenCaptureKit (top-left origin)
         let cgRect = CGRect(
             x: frame.origin.x,
             y: screenHeight - frame.origin.y - frame.height,
