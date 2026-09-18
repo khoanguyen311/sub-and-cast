@@ -24,7 +24,7 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
             x: initialSourceRect.origin.x,
             y: screenRect.height - initialSourceRect.origin.y - initialSourceRect.height,
             width: initialSourceRect.width,
-            height: initialSourceRect.height
+            height: initialSourceRect.height + OverlayLayoutConstants.headerOffset
         )
 
         let sPanel = FloatingOverlayPanel(contentRect: sourceRect)
@@ -32,16 +32,19 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         sPanel.delegate = self
         sPanel.contentView = NSHostingView(rootView: SourceCaptureOverlayView(appState: appState))
         // Start ordered out (hidden on launch)
-        sPanel.orderOut(nil)
+        sPanel.orderOut(nil as Any?)
         self.sourcePanel = sPanel
 
         // 2. Subtitle Output Panel
         let initialDisplayRect = appState.currentProfile.displayRect.cgRect
+        let initialSubHeight = appState.isPositioningOverlays
+            ? initialDisplayRect.height + OverlayLayoutConstants.headerOffset
+            : initialDisplayRect.height
         let displayRect = NSRect(
             x: initialDisplayRect.origin.x,
             y: screenRect.height - initialDisplayRect.origin.y - initialDisplayRect.height,
             width: initialDisplayRect.width,
-            height: initialDisplayRect.height
+            height: initialSubHeight
         )
 
         let subPanel = FloatingOverlayPanel(contentRect: displayRect)
@@ -49,7 +52,7 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         subPanel.delegate = self
         subPanel.contentView = NSHostingView(rootView: SubtitleOverlayView(appState: appState))
         // Start ordered out (hidden on launch)
-        subPanel.orderOut(nil)
+        subPanel.orderOut(nil as Any?)
         self.subtitlePanel = subPanel
 
         // Observe lock status
@@ -74,17 +77,18 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
             .receive(on: RunLoop.main)
             .sink { [weak self] isVisible, isPositioning, isScanning in
                 guard let self = self else { return }
+                self.updatePanelPositions(from: appState.currentProfile, isPositioning: isPositioning)
                 if isPositioning {
                     self.sourcePanel?.orderFrontRegardless()
                     self.subtitlePanel?.orderFrontRegardless()
                 } else if isVisible || isScanning {
                     // During active scanning / dialogue display, source box is hidden from screen
                     // so it doesn't obstruct the game, while subtitle box is visible
-                    self.sourcePanel?.orderOut(nil)
+                    self.sourcePanel?.orderOut(nil as Any?)
                     self.subtitlePanel?.orderFrontRegardless()
                 } else {
-                    self.sourcePanel?.orderOut(nil)
-                    self.subtitlePanel?.orderOut(nil)
+                    self.sourcePanel?.orderOut(nil as Any?)
+                    self.subtitlePanel?.orderOut(nil as Any?)
                 }
             }
             .store(in: &cancellables)
@@ -121,22 +125,37 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
     private var isProgrammaticUpdate = false
     private var isUserDraggingOrResizing = false
 
-    private func updatePanelPositions(from profile: GameProfile) {
+    private func updatePanelPositions(from profile: GameProfile, isPositioning: Bool? = nil) {
         guard !isUserDraggingOrResizing else { return }
         guard let screen = NSScreen.main else { return }
         let screenHeight = screen.frame.height
 
+        let positioning = isPositioning ?? AppState.shared.isPositioningOverlays
+        let offset = positioning ? OverlayLayoutConstants.headerOffset : 0
+
         isProgrammaticUpdate = true
         defer { isProgrammaticUpdate = false }
 
+        // 1. Source capture panel always has headerOffset when active
         let src = profile.sourceRect.cgRect
-        let srcAppKit = NSRect(x: src.origin.x, y: screenHeight - src.origin.y - src.height, width: src.width, height: src.height)
+        let srcAppKit = NSRect(
+            x: src.origin.x,
+            y: screenHeight - src.origin.y - src.height,
+            width: src.width,
+            height: src.height + OverlayLayoutConstants.headerOffset
+        )
         if let sPanel = sourcePanel, sPanel.frame != srcAppKit {
             sPanel.setFrame(srcAppKit, display: true)
         }
 
+        // 2. Subtitle panel has headerOffset only during positioning mode
         let dst = profile.displayRect.cgRect
-        let dstAppKit = NSRect(x: dst.origin.x, y: screenHeight - dst.origin.y - dst.height, width: dst.width, height: dst.height)
+        let dstAppKit = NSRect(
+            x: dst.origin.x,
+            y: screenHeight - dst.origin.y - dst.height,
+            width: dst.width,
+            height: dst.height + offset
+        )
         if let subPanel = subtitlePanel, subPanel.frame != dstAppKit {
             subPanel.setFrame(dstAppKit, display: true)
         }
@@ -165,20 +184,29 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         guard let window = notification.object as? NSWindow,
               let screen = NSScreen.main else { return }
 
+        let appState = AppState.shared
+        let isPositioning = appState.isPositioningOverlays
         let screenHeight = screen.frame.height
         let frame = window.frame
-        // Convert AppKit (bottom-left origin) to CoreGraphics/ScreenCaptureKit (top-left origin)
-        let cgRect = CGRect(
-            x: frame.origin.x,
-            y: screenHeight - frame.origin.y - frame.height,
-            width: frame.width,
-            height: frame.height
-        )
 
-        let appState = AppState.shared
         if window == sourcePanel {
+            let boxHeight = max(20, frame.height - OverlayLayoutConstants.headerOffset)
+            let cgRect = CGRect(
+                x: frame.origin.x,
+                y: screenHeight - frame.origin.y - boxHeight,
+                width: frame.width,
+                height: boxHeight
+            )
             appState.updateSourceRectLive(cgRect)
         } else if window == subtitlePanel {
+            let offset = isPositioning ? OverlayLayoutConstants.headerOffset : 0
+            let boxHeight = max(20, frame.height - offset)
+            let cgRect = CGRect(
+                x: frame.origin.x,
+                y: screenHeight - frame.origin.y - boxHeight,
+                width: frame.width,
+                height: boxHeight
+            )
             appState.updateDisplayRectLive(cgRect)
         }
     }

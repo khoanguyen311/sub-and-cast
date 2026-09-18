@@ -29,6 +29,11 @@ public enum OverlayResizeCorner {
     }
 }
 
+public enum OverlayLayoutConstants {
+    /// Height reserved above the selection box for the floating header bar (pill + vertical gap)
+    public static let headerOffset: CGFloat = 36
+}
+
 // MARK: - Native Window Drag Background Area
 public struct WindowDragAreaView: NSViewRepresentable {
     public let cursor: NSCursor
@@ -48,6 +53,7 @@ public struct WindowDragAreaView: NSViewRepresentable {
 
     public class DragNSView: NSView {
         var cursor: NSCursor
+        private var trackingArea: NSTrackingArea?
 
         init(cursor: NSCursor) {
             self.cursor = cursor
@@ -58,8 +64,32 @@ public struct WindowDragAreaView: NSViewRepresentable {
             fatalError("init(coder:) has not been implemented")
         }
 
+        public override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let existing = trackingArea {
+                removeTrackingArea(existing)
+            }
+            let area = NSTrackingArea(
+                rect: bounds,
+                options: [.cursorUpdate, .activeAlways, .inVisibleRect, .mouseEnteredAndExited],
+                owner: self,
+                userInfo: nil
+            )
+            addTrackingArea(area)
+            self.trackingArea = area
+        }
+
+        public override func cursorUpdate(with event: NSEvent) {
+            cursor.set()
+        }
+
         public override func resetCursorRects() {
             addCursorRect(bounds, cursor: cursor)
+        }
+
+        public override func hitTest(_ point: NSPoint) -> NSView? {
+            let localPoint = convert(point, from: superview)
+            return bounds.contains(localPoint) ? self : nil
         }
 
         public override func mouseDown(with event: NSEvent) {
@@ -93,6 +123,7 @@ public struct CursorRectView: NSViewRepresentable {
 
     public class CursorNSView: NSView {
         var cursor: NSCursor
+        private var trackingArea: NSTrackingArea?
 
         init(cursor: NSCursor) {
             self.cursor = cursor
@@ -101,6 +132,25 @@ public struct CursorRectView: NSViewRepresentable {
 
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+
+        public override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let existing = trackingArea {
+                removeTrackingArea(existing)
+            }
+            let area = NSTrackingArea(
+                rect: bounds,
+                options: [.cursorUpdate, .activeAlways, .inVisibleRect],
+                owner: self,
+                userInfo: nil
+            )
+            addTrackingArea(area)
+            self.trackingArea = area
+        }
+
+        public override func cursorUpdate(with event: NSEvent) {
+            cursor.set()
         }
 
         public override func resetCursorRects() {
@@ -175,7 +225,7 @@ public struct OverlayCornerResizeView: NSViewRepresentable {
 
                 var newFrame = initialWindowFrame
                 let minWidth: CGFloat = 120
-                let minHeight: CGFloat = 50
+                let minHeight: CGFloat = 50 + OverlayLayoutConstants.headerOffset
 
                 switch corner {
                 case .bottomRight:
