@@ -169,54 +169,14 @@ public struct SubtitleOverlayView: View {
             .padding(8)
     }
 
-    // MARK: - Corner Resize Handles
-    @ViewBuilder
+    // MARK: - Exclusive Bottom-Right Resize Handle
     private var cornerResizers: some View {
-        // 1. Top-Left
-        VStack {
-            HStack {
-                OverlayCornerResizeView(corner: .topLeft)
-                    .frame(width: 22, height: 22)
-                Spacer()
-            }
-            Spacer()
-        }
-
-        // 2. Top-Right
-        VStack {
-            HStack {
-                Spacer()
-                OverlayCornerResizeView(corner: .topRight)
-                    .frame(width: 22, height: 22)
-            }
-            Spacer()
-        }
-
-        // 3. Bottom-Left
-        VStack {
-            Spacer()
-            HStack {
-                OverlayCornerResizeView(corner: .bottomLeft)
-                    .frame(width: 22, height: 22)
-                Spacer()
-            }
-        }
-
-        // 4. Bottom-Right (with visual corner indicator)
         VStack {
             Spacer()
             HStack {
                 Spacer()
-                ZStack(alignment: .bottomTrailing) {
-                    OverlayCornerResizeView(corner: .bottomRight)
-                        .frame(width: 22, height: 22)
-
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 10))
-                        .foregroundColor(.orange.opacity(0.8))
-                        .padding(4)
-                        .allowsHitTesting(false)
-                }
+                OverlayBottomRightResizeHandle(tintColor: .orange)
+                    .padding([.bottom, .trailing], 8)
             }
         }
     }
