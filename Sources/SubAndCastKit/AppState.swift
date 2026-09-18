@@ -159,6 +159,20 @@ public final class AppState: ObservableObject {
         saveCurrentProfile()
     }
 
+    public func resetOverlayZonesToDefault() {
+        let screen = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let width: CGFloat = min(700, max(400, screen.width * 0.5))
+        let height: CGFloat = 110
+        let centerX = max(0, (screen.width - width) / 2)
+        let captureY = max(0, screen.height * 0.65)
+        let displayY = min(screen.height - 140, captureY + height + 20)
+
+        currentProfile.sourceRect = CodableRect(x: centerX, y: captureY, width: width, height: height)
+        currentProfile.displayRect = CodableRect(x: centerX, y: displayY, width: width, height: 130)
+        saveCurrentProfile()
+        statusMessage = "Overlays Reset to Default"
+    }
+
     public func selectProfile(_ profile: GameProfile) {
         self.currentProfile = profile
         saveCurrentProfile()

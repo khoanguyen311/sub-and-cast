@@ -9,37 +9,66 @@ public struct CaptureSettingsView: View {
 
     public var body: some View {
         Form {
+            // MARK: - Zone Positioning & Manual Coordinates
             Section {
+                // Header row with Action buttons
                 HStack {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("On-Screen Overlay Zones")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Zone Coordinates")
                             .font(.body)
-                        Text(appState.isPositioningOverlays ? "Drag and resize boxes on screen, then click Save & Done." : "Adjust the capture area and subtitle display area over your game.")
+                        Text(appState.isPositioningOverlays ? "Drag/resize on screen or edit values below." : "Fine-tune pixel coordinates or position on-screen.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     Spacer()
 
-                    if appState.isPositioningOverlays {
-                        Button(action: {
-                            appState.finishPositioningOverlays()
-                        }) {
-                            Label("Save & Done", systemImage: "checkmark.circle.fill")
+                    HStack(spacing: 8) {
+                        Button {
+                            appState.resetOverlayZonesToDefault()
+                        } label: {
+                            Label("Reset", systemImage: "arrow.counterclockwise")
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.green)
-                    } else {
-                        Button(action: {
-                            appState.startPositioningOverlays()
-                        }) {
-                            Label("Position Overlays", systemImage: "viewfinder")
+                        .help("Reset both overlay zones to centered defaults")
+
+                        if appState.isPositioningOverlays {
+                            Button(action: {
+                                appState.finishPositioningOverlays()
+                            }) {
+                                Label("Save & Done", systemImage: "checkmark.circle.fill")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.green)
+                        } else {
+                            Button(action: {
+                                appState.startPositioningOverlays()
+                            }) {
+                                Label("Position", systemImage: "viewfinder")
+                            }
                         }
                     }
                 }
+                .padding(.bottom, 2)
+
+                // Section A: OCR Capture Zone
+                ZoneCoordinateRow(
+                    title: "OCR Capture Area (Source)",
+                    iconName: "viewfinder",
+                    iconColor: .cyan,
+                    rect: $appState.currentProfile.sourceRect
+                )
+
+                // Section B: Subtitle Display Zone
+                ZoneCoordinateRow(
+                    title: "Subtitle Display Area (Target)",
+                    iconName: "captions.bubble",
+                    iconColor: .orange,
+                    rect: $appState.currentProfile.displayRect
+                )
             } header: {
                 Text("Zone Positioning")
             }
 
+            // MARK: - Timings
             Section {
                 LabeledContent("Capture Interval") {
                     HStack(spacing: 12) {
@@ -64,6 +93,7 @@ public struct CaptureSettingsView: View {
                 Text("Timings")
             }
 
+            // MARK: - HUD Appearance
             Section {
                 LabeledContent("Font Size") {
                     HStack(spacing: 12) {
@@ -89,5 +119,64 @@ public struct CaptureSettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+// MARK: - Coordinate Row & Inputs
+struct ZoneCoordinateRow: View {
+    let title: String
+    let iconName: String
+    let iconColor: Color
+    @Binding var rect: CodableRect
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Image(systemName: iconName)
+                    .foregroundColor(iconColor)
+                    .font(.caption.bold())
+                Text(title)
+                    .font(.subheadline.bold())
+            }
+
+            HStack(spacing: 10) {
+                CoordinateField(label: "X", value: $rect.x, range: 0...4000)
+                CoordinateField(label: "Y", value: $rect.y, range: 0...4000)
+                CoordinateField(label: "W", value: $rect.width, range: 80...3000)
+                CoordinateField(label: "H", value: $rect.height, range: 40...1500)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+struct CoordinateField: View {
+    let label: String
+    @Binding var value: CGFloat
+    let range: ClosedRange<Int>
+
+    private var intBinding: Binding<Int> {
+        Binding(
+            get: { Int(value.rounded()) },
+            set: { value = CGFloat($0) }
+        )
+    }
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Text(label)
+                .font(.caption2.bold())
+                .foregroundColor(.secondary)
+                .frame(width: 12, alignment: .leading)
+
+            TextField("", value: intBinding, format: .number)
+                .textFieldStyle(.roundedBorder)
+                .multilineTextAlignment(.trailing)
+                .monospacedDigit()
+                .frame(width: 52)
+
+            Stepper("", value: intBinding, in: range, step: 10)
+                .labelsHidden()
+        }
     }
 }

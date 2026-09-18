@@ -124,11 +124,15 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
 
         let src = profile.sourceRect.cgRect
         let srcAppKit = NSRect(x: src.origin.x, y: screenHeight - src.origin.y - src.height, width: src.width, height: src.height)
-        sourcePanel?.setFrame(srcAppKit, display: true)
+        if let sPanel = sourcePanel, sPanel.frame != srcAppKit {
+            sPanel.setFrame(srcAppKit, display: true)
+        }
 
         let dst = profile.displayRect.cgRect
         let dstAppKit = NSRect(x: dst.origin.x, y: screenHeight - dst.origin.y - dst.height, width: dst.width, height: dst.height)
-        subtitlePanel?.setFrame(dstAppKit, display: true)
+        if let subPanel = subtitlePanel, subPanel.frame != dstAppKit {
+            subPanel.setFrame(dstAppKit, display: true)
+        }
     }
 
     // MARK: - NSWindowDelegate
