@@ -92,36 +92,31 @@ public struct SubtitleOverlayView: View {
                 // Native Window Drag Area covering 100% of the dashed box
                 WindowDragAreaView(cursor: .openHand)
 
-                // Outer dashed border & subtle background tint
+                // Full-sized backdrop background matching dashed frame bounds
                 RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(Color.orange, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
-                    .background(Color.orange.opacity(0.05))
+                    .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(Color.orange, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
+                    )
                     .allowsHitTesting(false)
 
-                // Subtitle preview / placeholder
+                // Centered subtitle content
                 VStack {
-                    Spacer()
-                    if !appState.lastTranslatedText.isEmpty {
-                        subtitleCard
-                    } else {
-                        Text("Translated subtitles will appear here…")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.black.opacity(0.75))
-                                    .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 2)
-                            )
-                            .padding(12)
-                    }
-                    Spacer()
+                    Spacer(minLength: 0)
+                    Text(!appState.lastTranslatedText.isEmpty ? appState.lastTranslatedText : "Translated subtitles will appear here…")
+                        .font(.system(size: appState.currentProfile.fontSize, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                    Spacer(minLength: 0)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .allowsHitTesting(false)
 
-                // 4 Corner Resizers
+                // Exclusive Bottom-Right Resize Handle
                 cornerResizers
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -135,38 +130,34 @@ public struct SubtitleOverlayView: View {
 
     // MARK: - Playback Mode (Locked / Active scanning)
     private var playbackView: some View {
-        VStack {
-            Spacer()
+        ZStack {
             if !appState.lastTranslatedText.isEmpty {
-                subtitleCard
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
+                    .shadow(color: .black.opacity(0.5), radius: 6, x: 0, y: 3)
+
+                VStack {
+                    Spacer(minLength: 0)
+                    Text(appState.lastTranslatedText)
+                        .font(.system(size: appState.currentProfile.fontSize, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                    Spacer(minLength: 0)
+                }
             }
-            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .opacity(opacity)
+        .animation(.easeInOut(duration: 0.3), value: opacity)
         .allowsHitTesting(false)
         .onReceive(appState.$lastTranslatedText) { newText in
             guard !newText.isEmpty else { return }
             opacity = 1.0
             resetFadeTimer()
         }
-    }
-
-    // MARK: - Subtitle HUD Card
-    private var subtitleCard: some View {
-        Text(appState.lastTranslatedText)
-            .font(.system(size: appState.currentProfile.fontSize, weight: .bold, design: .rounded))
-            .foregroundColor(.white)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
-                    .shadow(color: .black.opacity(0.5), radius: 6, x: 0, y: 3)
-            )
-            .opacity(opacity)
-            .animation(.easeInOut(duration: 0.3), value: opacity)
-            .padding(8)
     }
 
     // MARK: - Exclusive Bottom-Right Resize Handle

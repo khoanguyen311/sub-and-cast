@@ -216,31 +216,16 @@ struct ZoneCoordinateRow: View {
                     .font(.subheadline.bold())
             }
 
-            HStack(alignment: .center, spacing: 10) {
-                // Position Group
-                HStack(alignment: .center, spacing: 8) {
-                    Text("Pos:")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.primary)
+            HStack(alignment: .center, spacing: 14) {
+                CoordinateField(label: "X:", value: $rect.x, range: 0...4000)
+                CoordinateField(label: "Y:", value: $rect.y, range: 0...4000)
 
-                    CoordinateField(label: "X", value: $rect.x, range: 0...4000)
-                    CoordinateField(label: "Y", value: $rect.y, range: 0...4000)
-                }
-
-                // Vertical Divider
                 Divider()
                     .frame(height: 16)
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, 2)
 
-                // Size Group
-                HStack(alignment: .center, spacing: 8) {
-                    Text("Size:")
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.primary)
-
-                    CoordinateField(label: "W", value: $rect.width, range: Int(CodableRect.minWidth)...3000)
-                    CoordinateField(label: "H", value: $rect.height, range: Int(CodableRect.minHeight)...1500)
-                }
+                CoordinateField(label: "W:", value: $rect.width, range: Int(CodableRect.minWidth)...3000)
+                CoordinateField(label: "H:", value: $rect.height, range: Int(CodableRect.minHeight)...1500)
             }
             .controlSize(.small)
         }
@@ -262,14 +247,14 @@ struct CoordinateField: View {
     var body: some View {
         HStack(alignment: .center, spacing: 4) {
             Text(label)
-                .font(.caption.bold())
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
 
             TextField("", value: intBinding, format: .number)
                 .textFieldStyle(.roundedBorder)
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
-                .frame(width: 52, height: 22)
+                .frame(width: 54, height: 22)
 
             Stepper("", value: intBinding, in: range, step: 1)
                 .labelsHidden()
