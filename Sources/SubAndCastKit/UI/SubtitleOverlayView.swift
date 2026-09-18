@@ -5,7 +5,6 @@ public struct SubtitleOverlayView: View {
     @ObservedObject var appState: AppState
     @State private var opacity: Double = 1.0
     @State private var fadeTimer: AnyCancellable?
-    @State private var isHoveringBody = false
     @State private var isTesting = false
 
     public init(appState: AppState) {
@@ -14,11 +13,17 @@ public struct SubtitleOverlayView: View {
 
     public var body: some View {
         ZStack(alignment: .topLeading) {
+            // Native Window Drag Area covering the whole zone when unlocked
+            if !appState.isLocked {
+                WindowDragAreaView()
+            }
+
             // Setup-mode border and chrome
             if !appState.isLocked {
                 RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(Color.orange, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
                     .background(Color.orange.opacity(0.05))
+                    .allowsHitTesting(false)
 
                 // Header toolbar
                 HStack(spacing: 6) {
@@ -29,7 +34,7 @@ public struct SubtitleOverlayView: View {
 
                     Spacer()
 
-                    // Test Translate button — runs a snapshot + translate immediately
+                    // Test Translate button
                     Button(action: {
                         triggerTestTranslate()
                     }) {
@@ -51,15 +56,6 @@ public struct SubtitleOverlayView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(isTesting)
-                    .onHover { inside in
-                        if inside {
-                            NSCursor.pointingHand.set()
-                        } else if isHoveringBody {
-                            NSCursor.openHand.set()
-                        } else {
-                            NSCursor.arrow.set()
-                        }
-                    }
 
                     Button(action: {
                         appState.finishPositioningOverlays()
@@ -76,15 +72,6 @@ public struct SubtitleOverlayView: View {
                         .cornerRadius(4)
                     }
                     .buttonStyle(.plain)
-                    .onHover { inside in
-                        if inside {
-                            NSCursor.pointingHand.set()
-                        } else if isHoveringBody {
-                            NSCursor.openHand.set()
-                        } else {
-                            NSCursor.arrow.set()
-                        }
-                    }
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
@@ -92,6 +79,55 @@ public struct SubtitleOverlayView: View {
                 .foregroundColor(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .padding(4)
+
+                // 4 Corner Resizers
+                // 1. Top-Left
+                VStack {
+                    HStack {
+                        OverlayCornerResizeView(corner: .topLeft)
+                            .frame(width: 22, height: 22)
+                        Spacer()
+                    }
+                    Spacer()
+                }
+
+                // 2. Top-Right
+                VStack {
+                    HStack {
+                        Spacer()
+                        OverlayCornerResizeView(corner: .topRight)
+                            .frame(width: 22, height: 22)
+                    }
+                    Spacer()
+                }
+
+                // 3. Bottom-Left
+                VStack {
+                    Spacer()
+                    HStack {
+                        OverlayCornerResizeView(corner: .bottomLeft)
+                            .frame(width: 22, height: 22)
+                        Spacer()
+                    }
+                }
+
+                // 4. Bottom-Right (with visual corner indicator)
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        ZStack(alignment: .bottomTrailing) {
+                            OverlayCornerResizeView(corner: .bottomRight)
+                                .frame(width: 22, height: 22)
+
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 10))
+                                .foregroundColor(.orange.opacity(0.8))
+                                .padding(4)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                }
             }
 
             // Subtitle text area
@@ -123,27 +159,16 @@ public struct SubtitleOverlayView: View {
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .allowsHitTesting(false)
         }
         .onReceive(appState.$lastTranslatedText) { newText in
             guard !newText.isEmpty else { return }
             opacity = 1.0
             resetFadeTimer()
         }
-        // Show open-hand cursor to hint this zone is draggable
-        .onHover { inside in
-            isHoveringBody = inside
-            if !appState.isLocked {
-                if inside {
-                    NSCursor.openHand.set()
-                } else {
-                    NSCursor.arrow.set()
-                }
-            }
-        }
     }
 
     // MARK: - Test Translate
-
     private func triggerTestTranslate() {
         guard !isTesting else { return }
         isTesting = true
@@ -156,7 +181,6 @@ public struct SubtitleOverlayView: View {
     }
 
     // MARK: - Fade Timer
-
     private func resetFadeTimer() {
         fadeTimer?.cancel()
         let timeout = appState.currentProfile.fadeTimeoutSeconds
