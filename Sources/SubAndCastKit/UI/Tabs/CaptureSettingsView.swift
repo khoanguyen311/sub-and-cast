@@ -189,14 +189,13 @@ struct ZoneCoordinateRow: View {
                     .font(.subheadline.bold())
             }
 
-            Grid(alignment: .center, horizontalSpacing: 10, verticalSpacing: 0) {
-                GridRow {
-                    CoordinateField(label: "X", value: $rect.x, range: 0...4000)
-                    CoordinateField(label: "Y", value: $rect.y, range: 0...4000)
-                    CoordinateField(label: "W", value: $rect.width, range: Int(CodableRect.minWidth)...3000)
-                    CoordinateField(label: "H", value: $rect.height, range: Int(CodableRect.minHeight)...1500)
-                }
+            HStack(alignment: .center, spacing: 12) {
+                CoordinateField(label: "X", value: $rect.x, range: 0...4000)
+                CoordinateField(label: "Y", value: $rect.y, range: 0...4000)
+                CoordinateField(label: "W", value: $rect.width, range: Int(CodableRect.minWidth)...3000)
+                CoordinateField(label: "H", value: $rect.height, range: Int(CodableRect.minHeight)...1500)
             }
+            .controlSize(.small)
         }
     }
 }
@@ -214,7 +213,7 @@ struct CoordinateField: View {
     }
 
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(alignment: .center, spacing: 4) {
             Text(label)
                 .font(.caption2.bold())
                 .foregroundColor(.secondary)
@@ -222,14 +221,14 @@ struct CoordinateField: View {
 
             TextField("", value: intBinding, format: .number)
                 .textFieldStyle(.roundedBorder)
-                .controlSize(.small)
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
-                .frame(width: 50)
+                .frame(width: 56, height: 22)
 
-            Stepper("", value: intBinding, in: range, step: 10)
+            Stepper("", value: intBinding, in: range, step: 1)
                 .labelsHidden()
-                .controlSize(.small)
+                .frame(height: 22)
         }
+        .frame(height: 24)
     }
 }
