@@ -64,6 +64,7 @@ public struct SettingsView: View {
                 .background(Color(NSColor.windowBackgroundColor))
         }
         .frame(width: 540, height: 500)
+        .navigationTitle("Preferences")
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .onChange(of: appState.currentProfile) { _, _ in
             appState.saveCurrentProfile()

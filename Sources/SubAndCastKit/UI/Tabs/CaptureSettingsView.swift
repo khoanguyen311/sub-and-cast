@@ -11,41 +11,7 @@ public struct CaptureSettingsView: View {
         Form {
             // MARK: - Zone Positioning & Manual Coordinates
             Section {
-                // Header row with Action buttons neatly aligned to the top-right
-                HStack {
-                    Spacer()
-
-                    HStack(spacing: 8) {
-                        Button {
-                            appState.resetOverlayZonesToDefault()
-                        } label: {
-                            Label("Reset", systemImage: "arrow.counterclockwise")
-                        }
-                        .controlSize(.small)
-                        .help("Reset both overlay zones to centered defaults")
-
-                        if appState.isPositioningOverlays {
-                            Button(action: {
-                                appState.finishPositioningOverlays()
-                            }) {
-                                Label("Save & Done", systemImage: "checkmark.circle.fill")
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.green)
-                            .controlSize(.small)
-                        } else {
-                            Button(action: {
-                                appState.startPositioningOverlays()
-                            }) {
-                                Label("Position", systemImage: "viewfinder")
-                            }
-                            .controlSize(.small)
-                        }
-                    }
-                }
-                .padding(.bottom, 2)
-
-                // Section A: OCR Capture Zone
+                // 1. OCR Capture Area (Source)
                 ZoneCoordinateRow(
                     title: "OCR Capture Area (Source)",
                     iconName: "viewfinder",
@@ -53,13 +19,49 @@ public struct CaptureSettingsView: View {
                     rect: $appState.currentProfile.sourceRect
                 )
 
-                // Section B: Subtitle Display Zone
+                // 2. Subtle hairline Divider
+                Divider()
+                    .padding(.vertical, 2)
+
+                // 3. Subtitle Display Area (Target)
                 ZoneCoordinateRow(
                     title: "Subtitle Display Area (Target)",
                     iconName: "captions.bubble",
                     iconColor: .orange,
                     rect: $appState.currentProfile.displayRect
                 )
+
+                // 4. Bottom action row aligned to the bottom-right
+                HStack(spacing: 8) {
+                    Spacer()
+
+                    Button {
+                        appState.resetOverlayZonesToDefault()
+                    } label: {
+                        Label("Reset", systemImage: "arrow.counterclockwise")
+                    }
+                    .controlSize(.small)
+                    .help("Reset both overlay zones to centered defaults")
+
+                    if appState.isPositioningOverlays {
+                        Button(action: {
+                            appState.finishPositioningOverlays()
+                        }) {
+                            Label("Save & Done", systemImage: "checkmark.circle.fill")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.green)
+                        .controlSize(.small)
+                    } else {
+                        Button(action: {
+                            appState.startPositioningOverlays()
+                        }) {
+                            Label("Position", systemImage: "viewfinder")
+                        }
+                        .controlSize(.small)
+                    }
+                }
+                .padding(.top, 4)
             } header: {
                 Text("Zone Positioning")
             }
