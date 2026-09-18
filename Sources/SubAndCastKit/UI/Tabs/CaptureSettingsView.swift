@@ -107,24 +107,57 @@ public struct CaptureSettingsView: View {
                 // Live Subtitle Preview Canvas
                 VStack(spacing: 0) {
                     ZStack {
-                        // In-game dark cinematic gradient background
-                        LinearGradient(
-                            colors: [Color(white: 0.14), Color(white: 0.08)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
+                        // Rich in-game cinematic background scene
+                        ZStack {
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.08, green: 0.10, blue: 0.22),
+                                    Color(red: 0.18, green: 0.10, blue: 0.28),
+                                    Color(red: 0.10, green: 0.20, blue: 0.26)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+
+                            // Ambient lighting glows (warm amber at bottom-left, neon cyan at top-right)
+                            RadialGradient(
+                                colors: [Color(red: 0.85, green: 0.45, blue: 0.15).opacity(0.45), .clear],
+                                center: .bottomLeading,
+                                startRadius: 10,
+                                endRadius: 120
+                            )
+
+                            RadialGradient(
+                                colors: [Color(red: 0.15, green: 0.75, blue: 0.95).opacity(0.40), .clear],
+                                center: .topTrailing,
+                                startRadius: 10,
+                                endRadius: 140
+                            )
+
+                            // Subtle in-game landscape ground silhouette
+                            Path { path in
+                                path.move(to: CGPoint(x: 0, y: 74))
+                                path.addLine(to: CGPoint(x: 180, y: 48))
+                                path.addLine(to: CGPoint(x: 360, y: 62))
+                                path.addLine(to: CGPoint(x: 540, y: 42))
+                                path.addLine(to: CGPoint(x: 540, y: 74))
+                                path.closeSubpath()
+                            }
+                            .fill(Color(white: 0.05).opacity(0.55))
+                        }
 
                         // Live Subtitle Box preview
                         Text("Xin chào thế giới / Hello World")
                             .font(.system(size: appState.currentProfile.fontSize, weight: .medium, design: .rounded))
                             .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.8), radius: 1, x: 0, y: 1)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 6)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
-                                    .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 2)
+                                    .shadow(color: .black.opacity(0.4 * appState.currentProfile.backgroundOpacity), radius: 4, x: 0, y: 2)
                             )
                             .padding(8)
                     }
@@ -132,7 +165,7 @@ public struct CaptureSettingsView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+                            .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                     )
                 }
                 .padding(.vertical, 2)
@@ -189,11 +222,31 @@ struct ZoneCoordinateRow: View {
                     .font(.subheadline.bold())
             }
 
-            HStack(alignment: .center, spacing: 12) {
-                CoordinateField(label: "X", value: $rect.x, range: 0...4000)
-                CoordinateField(label: "Y", value: $rect.y, range: 0...4000)
-                CoordinateField(label: "W", value: $rect.width, range: Int(CodableRect.minWidth)...3000)
-                CoordinateField(label: "H", value: $rect.height, range: Int(CodableRect.minHeight)...1500)
+            HStack(alignment: .center, spacing: 8) {
+                // Cluster 1 - Position
+                HStack(alignment: .center, spacing: 6) {
+                    Text("Pos:")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 30, alignment: .leading)
+                    CoordinateField(label: "X", value: $rect.x, range: 0...4000)
+                    CoordinateField(label: "Y", value: $rect.y, range: 0...4000)
+                }
+
+                // Vertical Divider
+                Divider()
+                    .frame(height: 16)
+                    .padding(.horizontal, 2)
+
+                // Cluster 2 - Size
+                HStack(alignment: .center, spacing: 6) {
+                    Text("Size:")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 30, alignment: .leading)
+                    CoordinateField(label: "W", value: $rect.width, range: Int(CodableRect.minWidth)...3000)
+                    CoordinateField(label: "H", value: $rect.height, range: Int(CodableRect.minHeight)...1500)
+                }
             }
             .controlSize(.small)
         }
