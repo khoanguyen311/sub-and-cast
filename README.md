@@ -50,15 +50,16 @@ open SubAndCast.app
 
 ## 🎮 How to Use While Playing
 
-1. **Launch the App**: Look for the `captions.bubble` icon in your macOS menu bar.
+1. **Launch the App**:
+   - On launch, the **Preferences** window opens. Overlays remain hidden until you activate them.
 2. **Position the Zones**:
-   - Drag and resize the **cyan dashed box** over your game's subtitle/dialogue area.
+   - In the **Capture & Overlays** tab, click **Position Overlays** (or press `⌘⇧L`).
+   - Drag and resize the **cyan dashed box** over your game's dialogue area.
    - Drag and resize the **orange dashed box** where you want translated subtitles to appear.
-3. **Lock Overlays**:
-   - Click the **Lock** button on either box or select **Lock Overlays** from the menu bar (`Cmd + L`).
-   - The boxes become invisible/transparent and mouse clicks will pass straight through to your game.
-4. **Start Auto-Scan**:
-   - Select **Start Auto-Scan** from the menu bar (`Cmd + S`) or click **Start Auto-Scan** in Preferences.
-   - Subtitles will appear and auto-fade when the conversation stops!
-5. **Preferences**:
-   - Click the menu bar icon and choose **Preferences...** (`Cmd + ,`) to switch profiles, adjust font sizes, change languages, or configure Gemini API keys.
+   - Click **Save & Done** (in the box header or Preferences) to lock the positions.
+3. **Start Auto-Scan & Play**:
+   - Press **`⌘⇧S`** (`Cmd + Shift + S`) anytime in-game to toggle auto-scanning.
+   - Or press **`⌘⇧T`** (`Cmd + Shift + T`) to take a single translation snapshot.
+   - Subtitles float seamlessly over your game and auto-fade when conversation ends.
+4. **Preferences (`Cmd + ,`)**:
+   - Use the in-window tab strip (**General**, **Translation**, **Capture & Overlays**) to customize languages, timings, font size, and game profiles.
