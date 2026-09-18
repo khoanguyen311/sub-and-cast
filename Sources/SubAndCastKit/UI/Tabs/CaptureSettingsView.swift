@@ -141,19 +141,25 @@ public struct CaptureSettingsView: View {
                         }
 
                         // Live Subtitle Box preview
-                        Text("Xin chào thế giới / Hello World")
-                            .font(.system(size: appState.currentProfile.fontSize, weight: .medium, design: .rounded))
-                            .foregroundColor(.white)
-                            .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
-                                    .shadow(color: .black.opacity(0.5 * appState.currentProfile.backgroundOpacity), radius: 4, x: 0, y: 2)
-                            )
-                            .padding(8)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Spacer(minLength: 0)
+                            Text("Xin chào thế giới / Hello World")
+                                .font(.system(size: appState.currentProfile.fontSize, weight: .medium, design: .rounded))
+                                .foregroundColor(.white)
+                                .lineSpacing(4)
+                                .multilineTextAlignment(.leading)
+                                .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
+                                .shadow(color: .black.opacity(0.5 * appState.currentProfile.backgroundOpacity), radius: 4, x: 0, y: 2)
+                        )
+                        .padding(6)
                     }
                     .frame(height: 85)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))

@@ -85,7 +85,7 @@ public final class AppState: ObservableObject {
         statusMessage = "Scanning paused"
     }
 
-    public func triggerSnapshot() {
+    public func testTranslate() {
         isOverlaysVisible = true
         Task { [weak self] in
             await self?.performScanCycle(force: true)

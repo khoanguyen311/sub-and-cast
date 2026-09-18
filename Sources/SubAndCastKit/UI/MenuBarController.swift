@@ -69,11 +69,6 @@ public final class MenuBarController: NSObject {
         scanItem.target = self
         menu.addItem(scanItem)
 
-        // Snapshot Trigger
-        let snapItem = NSMenuItem(title: "Capture Snapshot Now", action: #selector(captureSnapshot), keyEquivalent: "")
-        snapItem.target = self
-        menu.addItem(snapItem)
-
         menu.addItem(NSMenuItem.separator())
 
         // Positioning Toggle
@@ -99,10 +94,6 @@ public final class MenuBarController: NSObject {
 
     @objc private func toggleScan() {
         appState.toggleScanning()
-    }
-
-    @objc private func captureSnapshot() {
-        appState.triggerSnapshot()
     }
 
     @objc private func toggleLock() {

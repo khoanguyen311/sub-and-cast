@@ -101,18 +101,20 @@ public struct SubtitleOverlayView: View {
                     )
                     .allowsHitTesting(false)
 
-                // Centered subtitle content
-                VStack {
+                // Leading-aligned subtitle content with safe inset padding
+                VStack(alignment: .leading, spacing: 6) {
                     Spacer(minLength: 0)
                     Text(!appState.lastTranslatedText.isEmpty ? appState.lastTranslatedText : "Translated subtitles will appear here…")
                         .font(.system(size: appState.currentProfile.fontSize, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
+                        .lineSpacing(4)
+                        .multilineTextAlignment(.leading)
                         .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 0)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .allowsHitTesting(false)
 
@@ -136,17 +138,19 @@ public struct SubtitleOverlayView: View {
                     .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
                     .shadow(color: .black.opacity(0.5), radius: 6, x: 0, y: 3)
 
-                VStack {
+                VStack(alignment: .leading, spacing: 6) {
                     Spacer(minLength: 0)
                     Text(appState.lastTranslatedText)
                         .font(.system(size: appState.currentProfile.fontSize, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
+                        .lineSpacing(4)
+                        .multilineTextAlignment(.leading)
                         .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 0)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -176,7 +180,7 @@ public struct SubtitleOverlayView: View {
     private func triggerTestTranslate() {
         guard !isTesting else { return }
         isTesting = true
-        appState.triggerSnapshot()
+        appState.testTranslate()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
             isTesting = false
