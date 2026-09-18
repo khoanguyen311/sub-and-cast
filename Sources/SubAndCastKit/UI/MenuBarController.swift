@@ -76,8 +76,8 @@ public final class MenuBarController: NSObject {
 
         menu.addItem(NSMenuItem.separator())
 
-        // Lock Toggle
-        let lockTitle = appState.isLocked ? "Unlock Overlays (Edit Positions)" : "Lock Overlays (Pass-Through Clicks)"
+        // Positioning Toggle
+        let lockTitle = appState.isPositioningOverlays ? "Save & Lock Overlays" : "Position Overlays (Adjust Zones)"
         let lockItem = NSMenuItem(title: lockTitle, action: #selector(toggleLock), keyEquivalent: "l")
         lockItem.target = self
         menu.addItem(lockItem)

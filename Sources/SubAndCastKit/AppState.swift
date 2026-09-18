@@ -8,7 +8,9 @@ public final class AppState: ObservableObject {
     @Published public var profiles: [GameProfile] = []
     @Published public var currentProfile: GameProfile
     @Published public var isScanning: Bool = false
-    @Published public var isLocked: Bool = false
+    @Published public var isLocked: Bool = true // Default to locked
+    @Published public var isOverlaysVisible: Bool = false // Hidden on cold launch
+    @Published public var isPositioningOverlays: Bool = false // True when user clicked "Position Overlays"
     @Published public var isOCRActive: Bool = false
     @Published public var lastRecognizedText: String = ""
     @Published public var lastTranslatedText: String = ""
@@ -26,8 +28,26 @@ public final class AppState: ObservableObject {
         self.currentProfile = loadedProfiles.first ?? GameProfile()
     }
 
+    public func startPositioningOverlays() {
+        isOverlaysVisible = true
+        isPositioningOverlays = true
+        isLocked = false
+        statusMessage = "Positioning Overlays"
+    }
+
+    public func finishPositioningOverlays() {
+        isPositioningOverlays = false
+        isLocked = true
+        saveCurrentProfile()
+        statusMessage = "Overlays Saved & Locked"
+    }
+
     public func toggleLock() {
-        isLocked.toggle()
+        if isPositioningOverlays {
+            finishPositioningOverlays()
+        } else {
+            startPositioningOverlays()
+        }
     }
 
     public func toggleScanning() {
@@ -40,6 +60,7 @@ public final class AppState: ObservableObject {
 
     public func startScanning() {
         guard !isScanning else { return }
+        isOverlaysVisible = true
         isScanning = true
         statusMessage = "Auto-scan active"
         imageDiffer.reset()
@@ -65,6 +86,7 @@ public final class AppState: ObservableObject {
     }
 
     public func triggerSnapshot() {
+        isOverlaysVisible = true
         Task { [weak self] in
             await self?.performScanCycle(force: true)
         }
@@ -115,7 +137,8 @@ public final class AppState: ObservableObject {
             let translated = try await translationCoordinator.translate(
                 text: cleanOCR,
                 sourceLanguage: currentProfile.sourceLanguage,
-                targetLanguage: currentProfile.targetLanguage
+                targetLanguage: currentProfile.targetLanguage,
+                engineType: currentProfile.translationEngineType
             )
 
             self.lastTranslatedText = translated

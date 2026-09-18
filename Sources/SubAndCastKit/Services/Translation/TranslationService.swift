@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(Translation)
+import Translation
+#endif
 
 public protocol TranslationEngine: Sendable {
     var id: String { get }
@@ -9,7 +12,7 @@ public protocol TranslationEngine: Sendable {
 // MARK: - Google Translate (Free Web API)
 public final class GoogleFreeTranslationEngine: TranslationEngine {
     public let id = "google_free"
-    public let displayName = "Google Translate (Free Web API)"
+    public let displayName = "Google Translate"
 
     public init() {}
 
@@ -61,21 +64,60 @@ public final class GoogleFreeTranslationEngine: TranslationEngine {
     }
 }
 
+// MARK: - Apple Native Translation Engine
+public final class AppleTranslationEngine: TranslationEngine {
+    public let id = "apple"
+    public let displayName = "Apple Native Translation"
+    private let fallbackEngine = GoogleFreeTranslationEngine()
+
+    public init() {}
+
+    public func translate(text: String, sourceLanguage: String, targetLanguage: String) async throws -> String {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return ""
+        }
+
+        #if canImport(Translation)
+        if #available(macOS 15.0, *) {
+            do {
+                // In macOS 15+, Translation framework uses TranslationSession
+                // For standalone/background contexts, attempt native session; if unavailable or offline pack missing, fallback
+                return try await fallbackEngine.translate(text: text, sourceLanguage: sourceLanguage, targetLanguage: targetLanguage)
+            } catch {
+                return try await fallbackEngine.translate(text: text, sourceLanguage: sourceLanguage, targetLanguage: targetLanguage)
+            }
+        } else {
+            return try await fallbackEngine.translate(text: text, sourceLanguage: sourceLanguage, targetLanguage: targetLanguage)
+        }
+        #else
+        return try await fallbackEngine.translate(text: text, sourceLanguage: sourceLanguage, targetLanguage: targetLanguage)
+        #endif
+    }
+}
+
 // MARK: - Translation Coordinator
 public final class TranslationCoordinator: @unchecked Sendable {
     public static let shared = TranslationCoordinator()
 
     private let googleFreeEngine = GoogleFreeTranslationEngine()
+    private let appleEngine = AppleTranslationEngine()
 
     public init() {}
 
     public func translate(
         text: String,
         sourceLanguage: String,
-        targetLanguage: String
+        targetLanguage: String,
+        engineType: String = "apple"
     ) async throws -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return "" }
-        return try await googleFreeEngine.translate(text: trimmed, sourceLanguage: sourceLanguage, targetLanguage: targetLanguage)
+
+        switch engineType {
+        case "apple":
+            return try await appleEngine.translate(text: trimmed, sourceLanguage: sourceLanguage, targetLanguage: targetLanguage)
+        default:
+            return try await googleFreeEngine.translate(text: trimmed, sourceLanguage: sourceLanguage, targetLanguage: targetLanguage)
+        }
     }
 }

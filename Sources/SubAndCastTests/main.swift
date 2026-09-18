@@ -42,6 +42,11 @@ struct TestRunner {
             assertTest(decoded.sourceRect.x == 150, "GameProfile Coordinates preserved")
             assertTest(decoded.sourceLanguage == "ja", "GameProfile Source Language preserved")
             assertTest(decoded.targetLanguage == "en", "GameProfile Target Language preserved")
+
+            let defaultProfile = GameProfile()
+            assertTest(defaultProfile.sourceLanguage == "en", "GameProfile default source language is English (en)")
+            assertTest(defaultProfile.targetLanguage == "vi", "GameProfile default target language is Vietnamese (vi)")
+            assertTest(defaultProfile.translationEngineType == "apple", "GameProfile default translation engine is Apple Native")
         } catch {
             print("  ❌ [FAIL] GameProfile Serialization Error: \(error)")
             failed += 1

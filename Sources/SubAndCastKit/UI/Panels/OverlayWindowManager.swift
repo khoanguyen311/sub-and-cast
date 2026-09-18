@@ -31,7 +31,8 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         sPanel.title = "SubAndCast - Source"
         sPanel.delegate = self
         sPanel.contentView = NSHostingView(rootView: SourceCaptureOverlayView(appState: appState))
-        sPanel.orderFrontRegardless()
+        // Start ordered out (hidden on launch)
+        sPanel.orderOut(nil)
         self.sourcePanel = sPanel
 
         // 2. Subtitle Output Panel
@@ -47,7 +48,8 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         subPanel.title = "SubAndCast - Subtitles"
         subPanel.delegate = self
         subPanel.contentView = NSHostingView(rootView: SubtitleOverlayView(appState: appState))
-        subPanel.orderFrontRegardless()
+        // Start ordered out (hidden on launch)
+        subPanel.orderOut(nil)
         self.subtitlePanel = subPanel
 
         // Observe lock status
@@ -67,6 +69,26 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
             }
             .store(in: &cancellables)
 
+        // Observe overlay visibility and positioning states
+        Publishers.CombineLatest3(appState.$isOverlaysVisible, appState.$isPositioningOverlays, appState.$isScanning)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] isVisible, isPositioning, isScanning in
+                guard let self = self else { return }
+                if isPositioning {
+                    self.sourcePanel?.orderFrontRegardless()
+                    self.subtitlePanel?.orderFrontRegardless()
+                } else if isVisible || isScanning {
+                    // During active scanning / dialogue display, source box is hidden from screen
+                    // so it doesn't obstruct the game, while subtitle box is visible
+                    self.sourcePanel?.orderOut(nil)
+                    self.subtitlePanel?.orderFrontRegardless()
+                } else {
+                    self.sourcePanel?.orderOut(nil)
+                    self.subtitlePanel?.orderOut(nil)
+                }
+            }
+            .store(in: &cancellables)
+
         // Pre-warm settings window so first open is instant — build but do NOT show yet
         preWarmSettings(appState: appState)
     }
@@ -75,7 +97,7 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
     // without showing it, so the first call to showSettings() is lag-free.
     private func preWarmSettings(appState: AppState) {
         let window = NSWindow(
-            contentRect: NSRect(x: 200, y: 200, width: 500, height: 420),
+            contentRect: NSRect(x: 200, y: 200, width: 520, height: 440),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -84,7 +106,6 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         window.center()
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: SettingsView(appState: appState))
-        // Do not call makeKeyAndOrderFront — we just want it pre-loaded
         self.settingsWindow = window
     }
 

@@ -1,16 +1,38 @@
 import SwiftUI
 
+public enum SettingsTab: String, CaseIterable, Identifiable {
+    case general = "General"
+    case translation = "Translation"
+    case captureAndOverlays = "Capture & Overlays"
+
+    public var id: String { rawValue }
+
+    public var iconName: String {
+        switch self {
+        case .general: return "gearshape"
+        case .translation: return "bubble.left.and.bubble.right"
+        case .captureAndOverlays: return "viewfinder"
+        }
+    }
+}
+
 public struct SettingsView: View {
     @ObservedObject var appState: AppState
+    @State private var selectedTab: SettingsTab = .general
     @State private var newProfileName: String = ""
 
+    // Persistent @AppStorage defaults as requested (default source: en, default target: vi, provider: apple)
+    @AppStorage("defaultSourceLanguage") private var storedSourceLanguage: String = "en"
+    @AppStorage("defaultTargetLanguage") private var storedTargetLanguage: String = "vi"
+    @AppStorage("defaultTranslationProvider") private var storedTranslationProvider: String = "apple"
+
     private let supportedLanguages = [
+        ("en", "English"),
+        ("vi", "Vietnamese (Tiếng Việt)"),
         ("ja", "Japanese (日本語)"),
         ("zh-Hans", "Chinese Simplified (简体中文)"),
         ("zh-Hant", "Chinese Traditional (繁體中文)"),
         ("ko", "Korean (한국어)"),
-        ("en", "English"),
-        ("vi", "Vietnamese (Tiếng Việt)"),
         ("fr", "French (Français)"),
         ("de", "German (Deutsch)"),
         ("es", "Spanish (Español)")
@@ -22,22 +44,17 @@ public struct SettingsView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            TabView {
-                generalTab
-                    .tabItem {
-                        Label("General", systemImage: "gearshape")
-                    }
-
-                translationTab
-                    .tabItem {
-                        Label("Translation", systemImage: "character.bubble")
-                    }
-
-                captureAndOverlaysTab
-                    .tabItem {
-                        Label("Capture & Overlays", systemImage: "viewfinder.circle")
-                    }
+            Group {
+                switch selectedTab {
+                case .general:
+                    generalTab
+                case .translation:
+                    translationTab
+                case .captureAndOverlays:
+                    captureAndOverlaysTab
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 6)
@@ -49,10 +66,37 @@ public struct SettingsView: View {
                 .padding(.vertical, 10)
                 .background(Color(NSColor.windowBackgroundColor))
         }
-        .frame(width: 500, height: 420)
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(width: 520, height: 440)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("Preferences Tab", selection: $selectedTab) {
+                    ForEach(SettingsTab.allCases) { tab in
+                        Label(tab.rawValue, systemImage: tab.iconName)
+                            .tag(tab)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 380)
+            }
+        }
+        .onAppear {
+            syncWithStoredDefaults()
+        }
         .onChange(of: appState.currentProfile) { _, _ in
             appState.saveCurrentProfile()
+        }
+    }
+
+    private func syncWithStoredDefaults() {
+        if appState.currentProfile.sourceLanguage.isEmpty {
+            appState.currentProfile.sourceLanguage = storedSourceLanguage
+        }
+        if appState.currentProfile.targetLanguage.isEmpty {
+            appState.currentProfile.targetLanguage = storedTargetLanguage
+        }
+        if appState.currentProfile.translationEngineType.isEmpty {
+            appState.currentProfile.translationEngineType = storedTranslationProvider
         }
     }
 
@@ -110,7 +154,7 @@ public struct SettingsView: View {
                 LabeledContent("Snapshot Capture") {
                     Text("⌘T").font(.callout.monospaced()).foregroundColor(.secondary)
                 }
-                LabeledContent("Toggle Overlay Lock") {
+                LabeledContent("Position / Lock Overlays") {
                     Text("⌘L").font(.callout.monospaced()).foregroundColor(.secondary)
                 }
             } header: {
@@ -124,27 +168,50 @@ public struct SettingsView: View {
     private var translationTab: some View {
         Form {
             Section {
-                Picker("Source Language", selection: $appState.currentProfile.sourceLanguage) {
+                Picker("Source Language", selection: Binding(
+                    get: { appState.currentProfile.sourceLanguage },
+                    set: {
+                        appState.currentProfile.sourceLanguage = $0
+                        storedSourceLanguage = $0
+                    }
+                )) {
                     ForEach(supportedLanguages, id: \.0) { code, name in
                         Text(name).tag(code)
                     }
                 }
 
-                Picker("Target Language", selection: $appState.currentProfile.targetLanguage) {
+                Picker("Target Language", selection: Binding(
+                    get: { appState.currentProfile.targetLanguage },
+                    set: {
+                        appState.currentProfile.targetLanguage = $0
+                        storedTargetLanguage = $0
+                    }
+                )) {
                     ForEach(supportedLanguages, id: \.0) { code, name in
                         Text(name).tag(code)
                     }
                 }
+
+                Picker("Translation Provider", selection: Binding(
+                    get: { appState.currentProfile.translationEngineType },
+                    set: {
+                        appState.currentProfile.translationEngineType = $0
+                        storedTranslationProvider = $0
+                    }
+                )) {
+                    Text("Apple Native Translation").tag("apple")
+                    Text("Google Translate").tag("google_free")
+                }
             } header: {
-                Text("Languages")
+                Text("Languages & Engine")
             }
 
             Section {
                 LabeledContent("Translation Engine") {
                     HStack(spacing: 6) {
-                        Image(systemName: "globe")
-                            .foregroundColor(.blue)
-                        Text("Google Translate (Free Web API)")
+                        Image(systemName: appState.currentProfile.translationEngineType == "apple" ? "apple.logo" : "globe")
+                            .foregroundColor(appState.currentProfile.translationEngineType == "apple" ? .primary : .blue)
+                        Text(appState.currentProfile.translationEngineType == "apple" ? "Apple Native Translation (Offline/macOS 15+)" : "Google Translate (Free Web API)")
                             .foregroundColor(.secondary)
                     }
                 }
@@ -153,12 +220,12 @@ public struct SettingsView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "cpu")
                             .foregroundColor(.green)
-                        Text("Apple Neural Engine (On-Device)")
+                        Text("Apple Neural Engine (Vision Framework)")
                             .foregroundColor(.secondary)
                     }
                 }
             } header: {
-                Text("Engines")
+                Text("Provider Details")
             }
         }
         .formStyle(.grouped)
@@ -167,6 +234,37 @@ public struct SettingsView: View {
     // MARK: - Tab 3: Capture & Overlays
     private var captureAndOverlaysTab: some View {
         Form {
+            Section {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("On-Screen Overlay Zones")
+                            .font(.body)
+                        Text(appState.isPositioningOverlays ? "Drag and resize boxes on screen, then click Save & Done." : "Adjust the capture area and subtitle display area over your game.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+
+                    if appState.isPositioningOverlays {
+                        Button(action: {
+                            appState.finishPositioningOverlays()
+                        }) {
+                            Label("Save & Done", systemImage: "checkmark.circle.fill")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.green)
+                    } else {
+                        Button(action: {
+                            appState.startPositioningOverlays()
+                        }) {
+                            Label("Position Overlays", systemImage: "viewfinder")
+                        }
+                    }
+                }
+            } header: {
+                Text("Zone Positioning")
+            }
+
             Section {
                 LabeledContent("Capture Interval") {
                     HStack(spacing: 12) {
@@ -188,7 +286,7 @@ public struct SettingsView: View {
                     }
                 }
             } header: {
-                Text("Scan Timings")
+                Text("Timings")
             }
 
             Section {
@@ -257,16 +355,25 @@ public struct SettingsView: View {
                 .controlSize(.regular)
                 .help(appState.isScanning ? "Pause auto-scan (⌘S)" : "Start continuous auto-scan (⌘S)")
 
-                Button {
-                    appState.toggleLock()
-                } label: {
-                    Label(
-                        appState.isLocked ? "Unlock" : "Lock",
-                        systemImage: appState.isLocked ? "lock.fill" : "lock.open.fill"
-                    )
+                if appState.isPositioningOverlays {
+                    Button {
+                        appState.finishPositioningOverlays()
+                    } label: {
+                        Label("Done", systemImage: "checkmark")
+                    }
+                    .controlSize(.regular)
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .help("Save positions and lock overlays (⌘L)")
+                } else {
+                    Button {
+                        appState.startPositioningOverlays()
+                    } label: {
+                        Label("Position", systemImage: "viewfinder")
+                    }
+                    .controlSize(.regular)
+                    .help("Show draggable overlay boxes on screen (⌘L)")
                 }
-                .controlSize(.regular)
-                .help(appState.isLocked ? "Unlock overlays to drag/resize (⌘L)" : "Lock overlays to pass clicks to game (⌘L)")
             }
         }
     }

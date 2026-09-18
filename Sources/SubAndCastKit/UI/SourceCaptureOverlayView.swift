@@ -41,20 +41,20 @@ public struct SourceCaptureOverlayView: View {
                         Spacer()
 
                         Button(action: {
-                            appState.toggleLock()
+                            appState.finishPositioningOverlays()
                         }) {
                             HStack(spacing: 3) {
-                                Image(systemName: "lock.open")
-                                Text("Lock")
+                                Image(systemName: "checkmark.circle.fill")
+                                Text("Save & Done")
                             }
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 10, weight: .semibold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.cyan.opacity(0.3))
+                            .background(Color.green.opacity(0.4))
+                            .foregroundColor(.white)
                             .cornerRadius(4)
                         }
                         .buttonStyle(.plain)
-                        // Don't apply openHand cursor to buttons
                         .onHover { inside in
                             if inside {
                                 NSCursor.pointingHand.set()
