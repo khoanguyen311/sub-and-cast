@@ -93,7 +93,7 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
                     self.wasPositioning = false
                     self.stopPositioningKeyMonitoring()
 
-                    if isVisible || isScanning {
+                    if isScanning {
                         // During active scanning / dialogue display, source box is hidden from screen
                         // so it doesn't obstruct the game, while subtitle box is visible
                         self.sourcePanel?.orderOut(nil as Any?)

@@ -43,6 +43,10 @@ public final class AppState: ObservableObject {
     public func finishPositioningOverlays() {
         isPositioningOverlays = false
         isLocked = true
+        if !isScanning {
+            isOverlaysVisible = false
+        }
+        lastTranslatedText = ""
         saveCurrentProfile()
         statusMessage = "Overlays Saved & Locked"
         prePositioningSourceRect = nil
@@ -56,6 +60,10 @@ public final class AppState: ObservableObject {
         }
         isPositioningOverlays = false
         isLocked = true
+        if !isScanning {
+            isOverlaysVisible = false
+        }
+        lastTranslatedText = ""
         statusMessage = "Positioning Cancelled"
         prePositioningSourceRect = nil
         prePositioningDisplayRect = nil

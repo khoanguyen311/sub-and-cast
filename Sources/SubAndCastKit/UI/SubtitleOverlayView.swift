@@ -101,9 +101,8 @@ public struct SubtitleOverlayView: View {
                     )
                     .allowsHitTesting(false)
 
-                // Leading-aligned subtitle content with safe inset padding
+                // Top-leading aligned subtitle content with safe inset padding
                 VStack(alignment: .leading, spacing: 6) {
-                    Spacer(minLength: 0)
                     Text(!appState.lastTranslatedText.isEmpty ? appState.lastTranslatedText : "Translated subtitles will appear here…")
                         .font(.system(size: appState.currentProfile.fontSize, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
@@ -113,9 +112,11 @@ public struct SubtitleOverlayView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.top, 16)
+                .padding(.leading, 20)
+                .padding(.trailing, 20)
+                .padding(.bottom, 16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .allowsHitTesting(false)
 
                 // Exclusive Bottom-Right Resize Handle
@@ -132,14 +133,13 @@ public struct SubtitleOverlayView: View {
 
     // MARK: - Playback Mode (Locked / Active scanning)
     private var playbackView: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             if !appState.lastTranslatedText.isEmpty {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
                     .shadow(color: .black.opacity(0.5), radius: 6, x: 0, y: 3)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Spacer(minLength: 0)
                     Text(appState.lastTranslatedText)
                         .font(.system(size: appState.currentProfile.fontSize, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
@@ -149,11 +149,13 @@ public struct SubtitleOverlayView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 14)
+                .padding(.top, 16)
+                .padding(.leading, 20)
+                .padding(.trailing, 20)
+                .padding(.bottom, 16)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .opacity(opacity)
         .animation(.easeInOut(duration: 0.3), value: opacity)
         .allowsHitTesting(false)

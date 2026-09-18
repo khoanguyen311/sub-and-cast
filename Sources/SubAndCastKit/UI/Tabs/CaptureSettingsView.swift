@@ -142,7 +142,6 @@ public struct CaptureSettingsView: View {
 
                         // Live Subtitle Box preview
                         VStack(alignment: .leading, spacing: 6) {
-                            Spacer(minLength: 0)
                             Text("Xin chào thế giới / Hello World")
                                 .font(.system(size: appState.currentProfile.fontSize, weight: .medium, design: .rounded))
                                 .foregroundColor(.white)
@@ -152,8 +151,11 @@ public struct CaptureSettingsView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Spacer(minLength: 0)
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 14)
+                        .padding(.top, 16)
+                        .padding(.leading, 20)
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 16)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
                                 .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
