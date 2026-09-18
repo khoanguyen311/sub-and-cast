@@ -55,17 +55,17 @@ public struct GeneralSettingsView: View {
             }
 
             Section {
-                LabeledContent("Auto-Scan") {
-                    Text("⌘S").font(.callout.monospaced()).foregroundColor(.secondary)
+                LabeledContent("Auto-Scan (Start / Pause)") {
+                    Text("⌘⇧S").font(.callout.monospaced()).foregroundColor(.secondary)
                 }
                 LabeledContent("Snapshot Capture") {
-                    Text("⌘T").font(.callout.monospaced()).foregroundColor(.secondary)
+                    Text("⌘⇧T").font(.callout.monospaced()).foregroundColor(.secondary)
                 }
                 LabeledContent("Position / Lock Overlays") {
-                    Text("⌘L").font(.callout.monospaced()).foregroundColor(.secondary)
+                    Text("⌘⇧L").font(.callout.monospaced()).foregroundColor(.secondary)
                 }
             } header: {
-                Text("Keyboard Shortcuts")
+                Text("Global Hotkeys (In-Game)")
             }
         }
         .formStyle(.grouped)

@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let state = AppState.shared
         self.menuBarController = MenuBarController(appState: state)
         OverlayWindowManager.shared.setupOverlays(appState: state)
+        GlobalHotKeyManager.shared.registerHotKeys(appState: state)
 
         // Open Preferences immediately on first launch
         OverlayWindowManager.shared.showSettings(appState: state)

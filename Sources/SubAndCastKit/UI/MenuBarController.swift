@@ -65,12 +65,14 @@ public final class MenuBarController: NSObject {
 
         // Auto Scan Toggle
         let scanTitle = appState.isScanning ? "Pause Auto-Scan" : "Start Auto-Scan"
-        let scanItem = NSMenuItem(title: scanTitle, action: #selector(toggleScan), keyEquivalent: "s")
+        let scanItem = NSMenuItem(title: scanTitle, action: #selector(toggleScan), keyEquivalent: "S")
+        scanItem.keyEquivalentModifierMask = [.command, .shift]
         scanItem.target = self
         menu.addItem(scanItem)
 
         // Snapshot Trigger
-        let snapItem = NSMenuItem(title: "Capture Snapshot Now", action: #selector(captureSnapshot), keyEquivalent: "t")
+        let snapItem = NSMenuItem(title: "Capture Snapshot Now", action: #selector(captureSnapshot), keyEquivalent: "T")
+        snapItem.keyEquivalentModifierMask = [.command, .shift]
         snapItem.target = self
         menu.addItem(snapItem)
 
@@ -78,7 +80,8 @@ public final class MenuBarController: NSObject {
 
         // Positioning Toggle
         let lockTitle = appState.isPositioningOverlays ? "Save & Lock Overlays" : "Position Overlays (Adjust Zones)"
-        let lockItem = NSMenuItem(title: lockTitle, action: #selector(toggleLock), keyEquivalent: "l")
+        let lockItem = NSMenuItem(title: lockTitle, action: #selector(toggleLock), keyEquivalent: "L")
+        lockItem.keyEquivalentModifierMask = [.command, .shift]
         lockItem.target = self
         menu.addItem(lockItem)
 
