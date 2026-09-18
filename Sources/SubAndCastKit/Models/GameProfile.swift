@@ -2,23 +2,46 @@ import Foundation
 import CoreGraphics
 
 public struct CodableRect: Codable, Equatable {
-    public var x: CGFloat
-    public var y: CGFloat
-    public var width: CGFloat
-    public var height: CGFloat
+    public static let minWidth: CGFloat = 120
+    public static let minHeight: CGFloat = 40
+
+    public var x: CGFloat {
+        didSet { x = max(0, x) }
+    }
+    public var y: CGFloat {
+        didSet { y = max(0, y) }
+    }
+    public var width: CGFloat {
+        didSet { width = max(Self.minWidth, width) }
+    }
+    public var height: CGFloat {
+        didSet { height = max(Self.minHeight, height) }
+    }
 
     public init(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat) {
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
+        self.x = max(0, x)
+        self.y = max(0, y)
+        self.width = max(Self.minWidth, width)
+        self.height = max(Self.minHeight, height)
     }
 
     public init(cgRect: CGRect) {
-        self.x = cgRect.origin.x
-        self.y = cgRect.origin.y
-        self.width = cgRect.size.width
-        self.height = cgRect.size.height
+        self.x = max(0, cgRect.origin.x)
+        self.y = max(0, cgRect.origin.y)
+        self.width = max(Self.minWidth, cgRect.size.width)
+        self.height = max(Self.minHeight, cgRect.size.height)
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let rawX = try container.decodeIfPresent(CGFloat.self, forKey: .x) ?? 0
+        let rawY = try container.decodeIfPresent(CGFloat.self, forKey: .y) ?? 0
+        let rawW = try container.decodeIfPresent(CGFloat.self, forKey: .width) ?? Self.minWidth
+        let rawH = try container.decodeIfPresent(CGFloat.self, forKey: .height) ?? Self.minHeight
+        self.x = max(0, rawX)
+        self.y = max(0, rawY)
+        self.width = max(Self.minWidth, rawW)
+        self.height = max(Self.minHeight, rawH)
     }
 
     public var cgRect: CGRect {

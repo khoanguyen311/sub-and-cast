@@ -161,36 +161,44 @@ public final class AppState: ObservableObject {
     }
 
     public func updateSourceRectLive(_ rect: CGRect) {
+        guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
         currentProfile.sourceRect = CodableRect(cgRect: rect)
         scheduleSaveCurrentProfile()
     }
 
     public func updateDisplayRectLive(_ rect: CGRect) {
+        guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
         currentProfile.displayRect = CodableRect(cgRect: rect)
         scheduleSaveCurrentProfile()
     }
 
     public func updateSourceRect(_ rect: CGRect) {
+        guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
         currentProfile.sourceRect = CodableRect(cgRect: rect)
         saveCurrentProfile()
     }
 
     public func updateDisplayRect(_ rect: CGRect) {
+        guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
         currentProfile.displayRect = CodableRect(cgRect: rect)
         saveCurrentProfile()
     }
 
     public func resetOverlayZonesToDefault() {
-        let screen = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        let width: CGFloat = min(700, max(400, screen.width * 0.5))
-        let height: CGFloat = 110
+        let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let width: CGFloat = min(650, max(400, screen.width - 40))
+        let captureHeight: CGFloat = 140
+        let subtitleHeight: CGFloat = 120
         let centerX = max(0, (screen.width - width) / 2)
-        let captureY = max(0, screen.height * 0.65)
-        let displayY = min(screen.height - 140, captureY + height + 20)
+        // Dialogue box lower-mid screen (CoreGraphics top-left origin)
+        let captureY = max(0, screen.height * 0.50)
+        // Subtitle output zone near bottom
+        let displayY = max(captureY + captureHeight + 10, min(screen.height - subtitleHeight - 20, screen.height * 0.78))
 
-        currentProfile.sourceRect = CodableRect(x: centerX, y: captureY, width: width, height: height)
-        currentProfile.displayRect = CodableRect(x: centerX, y: displayY, width: width, height: 130)
+        currentProfile.sourceRect = CodableRect(x: centerX, y: captureY, width: width, height: captureHeight)
+        currentProfile.displayRect = CodableRect(x: centerX, y: displayY, width: width, height: subtitleHeight)
         saveCurrentProfile()
+        OverlayWindowManager.shared.updatePanelPositions(from: currentProfile)
         statusMessage = "Overlays Reset to Default"
     }
 

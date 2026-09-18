@@ -101,7 +101,7 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
     // without showing it, so the first call to showSettings() is lag-free.
     private func preWarmSettings(appState: AppState) {
         let window = NSWindow(
-            contentRect: NSRect(x: 200, y: 200, width: 540, height: 540),
+            contentRect: NSRect(x: 200, y: 200, width: 540, height: 570),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -125,7 +125,7 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
     private var isProgrammaticUpdate = false
     private var isUserDraggingOrResizing = false
 
-    private func updatePanelPositions(from profile: GameProfile, isPositioning: Bool? = nil) {
+    public func updatePanelPositions(from profile: GameProfile, isPositioning: Bool? = nil) {
         guard !isUserDraggingOrResizing else { return }
         guard let screen = NSScreen.main else { return }
         let screenHeight = screen.frame.height
@@ -185,26 +185,31 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
               let screen = NSScreen.main else { return }
 
         let appState = AppState.shared
-        let isPositioning = appState.isPositioningOverlays
+        // Guard against coordinate corruption when positioning mode is inactive
+        guard appState.isPositioningOverlays else { return }
+        guard window.isVisible && window.frame.width > 0 && window.frame.height > 0 else { return }
+
         let screenHeight = screen.frame.height
         let frame = window.frame
+        let offset = OverlayLayoutConstants.headerOffset
 
         if window == sourcePanel {
-            let boxHeight = max(20, frame.height - OverlayLayoutConstants.headerOffset)
+            let boxHeight = max(CodableRect.minHeight, frame.height - offset)
+            let boxWidth = max(CodableRect.minWidth, frame.width)
             let cgRect = CGRect(
-                x: frame.origin.x,
-                y: screenHeight - frame.origin.y - boxHeight,
-                width: frame.width,
+                x: max(0, frame.origin.x),
+                y: max(0, screenHeight - frame.origin.y - boxHeight),
+                width: boxWidth,
                 height: boxHeight
             )
             appState.updateSourceRectLive(cgRect)
         } else if window == subtitlePanel {
-            let offset = isPositioning ? OverlayLayoutConstants.headerOffset : 0
-            let boxHeight = max(20, frame.height - offset)
+            let boxHeight = max(CodableRect.minHeight, frame.height - offset)
+            let boxWidth = max(CodableRect.minWidth, frame.width)
             let cgRect = CGRect(
-                x: frame.origin.x,
-                y: screenHeight - frame.origin.y - boxHeight,
-                width: frame.width,
+                x: max(0, frame.origin.x),
+                y: max(0, screenHeight - frame.origin.y - boxHeight),
+                width: boxWidth,
                 height: boxHeight
             )
             appState.updateDisplayRectLive(cgRect)

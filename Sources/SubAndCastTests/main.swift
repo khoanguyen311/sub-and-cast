@@ -105,6 +105,26 @@ struct TestRunner {
             assertTest(!profiles.isEmpty, "ProfileManager loads at least one default profile")
         }
 
+        // Test 5: CodableRect Clamping & Self-Healing Decoder
+        do {
+            let clamped = CodableRect(x: -50, y: -20, width: 0, height: 10)
+            assertTest(clamped.x == 0, "CodableRect clamps negative x to 0")
+            assertTest(clamped.y == 0, "CodableRect clamps negative y to 0")
+            assertTest(clamped.width == CodableRect.minWidth, "CodableRect clamps width to minWidth (120)")
+            assertTest(clamped.height == CodableRect.minHeight, "CodableRect clamps height to minHeight (40)")
+
+            // Test decoding corrupted profile with W: 0, H: 20
+            let corruptedJSON = """
+            {"x": 100, "y": 200, "width": 0, "height": 20}
+            """.data(using: .utf8)!
+            let healed = try JSONDecoder().decode(CodableRect.self, from: corruptedJSON)
+            assertTest(healed.width == CodableRect.minWidth, "CodableRect decoder heals width 0 to 120")
+            assertTest(healed.height == CodableRect.minHeight, "CodableRect decoder heals height 20 to 40")
+        } catch {
+            print("  ❌ [FAIL] CodableRect Clamping Error: \(error)")
+            failed += 1
+        }
+
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")
         if failed > 0 {
             exit(1)
