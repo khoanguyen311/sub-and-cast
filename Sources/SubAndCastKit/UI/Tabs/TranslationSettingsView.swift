@@ -79,18 +79,6 @@ public struct TranslationSettingsView: View {
                 }
             } header: {
                 Text("Languages & Engine")
-            } footer: {
-                VStack(alignment: .leading, spacing: 4) {
-                    if appState.currentProfile.translationEngineType == "apple" {
-                        Text("Apple Native Translation runs 100% on-device on macOS 15+ (automatically falls back to Google Translate if offline language models are unavailable).")
-                    } else {
-                        Text("Google Translate connects via free web endpoint with zero configuration required.")
-                    }
-                    Text("OCR runs on-device using the Apple Silicon Neural Engine via the Vision framework.")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.top, 4)
             }
         }
         .formStyle(.grouped)

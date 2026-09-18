@@ -9,11 +9,6 @@ public struct SourceCaptureOverlayView: View {
 
     public var body: some View {
         ZStack(alignment: .topLeading) {
-            // Native Window Drag Area covering the whole zone when unlocked
-            if !appState.isLocked {
-                WindowDragAreaView()
-            }
-
             // Outer dashed border
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(
@@ -29,43 +24,55 @@ public struct SourceCaptureOverlayView: View {
                 .allowsHitTesting(false)
 
             if !appState.isLocked {
-                // Header toolbar
-                HStack(spacing: 6) {
-                    Image(systemName: "viewfinder")
-                        .font(.system(size: 11, weight: .bold))
-                    Text("OCR Capture Zone")
-                        .font(.system(size: 11, weight: .semibold))
+                // Header toolbar + Body Drag Area
+                VStack(spacing: 0) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "viewfinder")
+                            .font(.system(size: 11, weight: .bold))
+                        Text("OCR Capture Zone")
+                            .font(.system(size: 11, weight: .semibold))
 
-                    if appState.isOCRActive {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 6, height: 6)
-                    }
-
-                    Spacer()
-
-                    Button(action: {
-                        appState.finishPositioningOverlays()
-                    }) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "checkmark.circle.fill")
-                            Text("Save & Done")
+                        if appState.isOCRActive {
+                            Circle()
+                                .fill(Color.green)
+                                .frame(width: 6, height: 6)
                         }
-                        .font(.system(size: 10, weight: .semibold))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.green.opacity(0.4))
-                        .foregroundColor(.white)
-                        .cornerRadius(4)
+
+                        Spacer()
+
+                        Button(action: {
+                            appState.finishPositioningOverlays()
+                        }) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "checkmark.circle.fill")
+                                Text("Save & Done")
+                            }
+                            .font(.system(size: 10, weight: .semibold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.green.opacity(0.4))
+                            .foregroundColor(.white)
+                            .cornerRadius(4)
+                        }
+                        .buttonStyle(.plain)
+                        .pointingHandCursor()
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        ZStack {
+                            Color.black.opacity(0.75)
+                            WindowDragAreaView(cursor: .arrow)
+                        }
+                    )
+                    .foregroundColor(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .padding(4)
+
+                    // Body Drag Area (dashed/transparent body zone)
+                    WindowDragAreaView(cursor: .openHand)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.black.opacity(0.75))
-                .foregroundColor(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .padding(4)
 
                 // 4 Corner Resizers
                 // 1. Top-Left

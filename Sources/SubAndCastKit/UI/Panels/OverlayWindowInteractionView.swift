@@ -31,24 +31,98 @@ public enum OverlayResizeCorner {
 
 // MARK: - Native Window Drag Background Area
 public struct WindowDragAreaView: NSViewRepresentable {
-    public init() {}
+    public let cursor: NSCursor
 
-    public func makeNSView(context: Context) -> DragNSView {
-        DragNSView()
+    public init(cursor: NSCursor = .openHand) {
+        self.cursor = cursor
     }
 
-    public func updateNSView(_ nsView: DragNSView, context: Context) {}
+    public func makeNSView(context: Context) -> DragNSView {
+        DragNSView(cursor: cursor)
+    }
+
+    public func updateNSView(_ nsView: DragNSView, context: Context) {
+        nsView.cursor = cursor
+        nsView.window?.invalidateCursorRects(for: nsView)
+    }
 
     public class DragNSView: NSView {
+        var cursor: NSCursor
+
+        init(cursor: NSCursor) {
+            self.cursor = cursor
+            super.init(frame: .zero)
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
         public override func resetCursorRects() {
-            addCursorRect(bounds, cursor: .openHand)
+            addCursorRect(bounds, cursor: cursor)
         }
 
         public override func mouseDown(with event: NSEvent) {
-            NSCursor.closedHand.push()
-            window?.performDrag(with: event)
-            NSCursor.pop()
+            if cursor == .openHand {
+                NSCursor.closedHand.push()
+                window?.performDrag(with: event)
+                NSCursor.pop()
+            } else {
+                window?.performDrag(with: event)
+            }
         }
+    }
+}
+
+// MARK: - Native Cursor Rect Area
+public struct CursorRectView: NSViewRepresentable {
+    public let cursor: NSCursor
+
+    public init(cursor: NSCursor) {
+        self.cursor = cursor
+    }
+
+    public func makeNSView(context: Context) -> CursorNSView {
+        CursorNSView(cursor: cursor)
+    }
+
+    public func updateNSView(_ nsView: CursorNSView, context: Context) {
+        nsView.cursor = cursor
+        nsView.window?.invalidateCursorRects(for: nsView)
+    }
+
+    public class CursorNSView: NSView {
+        var cursor: NSCursor
+
+        init(cursor: NSCursor) {
+            self.cursor = cursor
+            super.init(frame: .zero)
+        }
+
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        public override func resetCursorRects() {
+            addCursorRect(bounds, cursor: cursor)
+        }
+    }
+}
+
+extension View {
+    public func pointingHandCursor() -> some View {
+        self
+            .overlay(
+                CursorRectView(cursor: .pointingHand)
+                    .allowsHitTesting(false)
+            )
+            .onHover { isInside in
+                if isInside {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
     }
 }
 
