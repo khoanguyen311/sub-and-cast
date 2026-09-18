@@ -101,7 +101,7 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
     // without showing it, so the first call to showSettings() is lag-free.
     private func preWarmSettings(appState: AppState) {
         let window = NSWindow(
-            contentRect: NSRect(x: 200, y: 200, width: 540, height: 570),
+            contentRect: NSRect(x: 200, y: 200, width: 540, height: 650),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false

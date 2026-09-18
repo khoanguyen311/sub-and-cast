@@ -104,9 +104,42 @@ public struct CaptureSettingsView: View {
 
             // MARK: - HUD Appearance
             Section {
+                // Live Subtitle Preview Canvas
+                VStack(spacing: 0) {
+                    ZStack {
+                        // In-game dark cinematic gradient background
+                        LinearGradient(
+                            colors: [Color(white: 0.14), Color(white: 0.08)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+
+                        // Live Subtitle Box preview
+                        Text("Xin chào thế giới / Hello World")
+                            .font(.system(size: appState.currentProfile.fontSize, weight: .medium, design: .rounded))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
+                                    .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 2)
+                            )
+                            .padding(8)
+                    }
+                    .frame(height: 74)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
+                    )
+                }
+                .padding(.vertical, 2)
+
                 LabeledContent("Font Size") {
                     HStack(spacing: 12) {
-                        Slider(value: $appState.currentProfile.fontSize, in: 14...36, step: 1)
+                        Slider(value: $appState.currentProfile.fontSize, in: 8...36, step: 1)
                         Text("\(Int(appState.currentProfile.fontSize)) pt")
                             .monospacedDigit()
                             .foregroundColor(.secondary)
