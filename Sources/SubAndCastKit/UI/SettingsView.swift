@@ -88,19 +88,6 @@ public struct SettingsView: View {
                             Text(name).tag(code)
                         }
                     }
-
-                    Picker("Translation Provider", selection: $appState.currentProfile.translationEngineType) {
-                        Text("Google Translate (Free Web API)").tag("google_free")
-                        Text("Google Gemini Flash (API Key)").tag("gemini")
-                        Text("Apple Native Translation").tag("apple")
-                    }
-
-                    if appState.currentProfile.translationEngineType == "gemini" {
-                        SecureField("Gemini API Key", text: Binding(
-                            get: { appState.currentProfile.geminiApiKey ?? "" },
-                            set: { appState.currentProfile.geminiApiKey = $0 }
-                        ))
-                    }
                 }
 
                 Divider().padding(.vertical, 4)

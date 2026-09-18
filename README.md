@@ -13,7 +13,6 @@ Inspired by [OCR-Translator](https://github.com/tomkam1702/OCR-Translator), **Su
 - **Smart Perceptual Frame Diffing**: Computes downscaled image hashes before performing OCR to avoid wasteful compute cycles and eliminate redundant translation requests when dialogue hasn't changed.
 - **Free & Flexible Translation Options**:
   - **Google Translate (Free Web API)**: Works out-of-the-box with zero configuration or API key.
-  - **Google Gemini Flash**: Context-aware game dialogue translation with nuanced storytelling tone (using free tier API key).
   - **Apple Native Translation**: On-device offline translation for macOS 15+.
 - **Floating Overlays with Click-Through**:
   - **Source Capture Zone**: Resizable & draggable box placed directly over the game's dialogue area.

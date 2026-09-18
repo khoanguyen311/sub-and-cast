@@ -37,8 +37,6 @@ public struct GameProfile: Codable, Identifiable, Equatable {
     public var fadeTimeoutSeconds: Double
     public var fontSize: CGFloat
     public var backgroundOpacity: Double
-    public var translationEngineType: String // "apple", "gemini", "google_free"
-    public var geminiApiKey: String?
 
     public init(
         id: UUID = UUID(),
@@ -50,9 +48,7 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         captureIntervalSeconds: Double = 0.8,
         fadeTimeoutSeconds: Double = 4.0,
         fontSize: CGFloat = 20.0,
-        backgroundOpacity: Double = 0.85,
-        translationEngineType: String = "apple",
-        geminiApiKey: String? = nil
+        backgroundOpacity: Double = 0.85
     ) {
         self.id = id
         self.name = name
@@ -64,7 +60,5 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         self.fadeTimeoutSeconds = fadeTimeoutSeconds
         self.fontSize = fontSize
         self.backgroundOpacity = backgroundOpacity
-        self.translationEngineType = translationEngineType
-        self.geminiApiKey = geminiApiKey
     }
 }

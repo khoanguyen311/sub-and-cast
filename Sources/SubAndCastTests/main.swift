@@ -31,8 +31,7 @@ struct TestRunner {
                 captureIntervalSeconds: 0.5,
                 fadeTimeoutSeconds: 5.0,
                 fontSize: 22.0,
-                backgroundOpacity: 0.9,
-                translationEngineType: "google_free"
+                backgroundOpacity: 0.9
             )
 
             let data = try JSONEncoder().encode(originalProfile)

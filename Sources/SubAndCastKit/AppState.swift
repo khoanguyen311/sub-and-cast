@@ -115,9 +115,7 @@ public final class AppState: ObservableObject {
             let translated = try await translationCoordinator.translate(
                 text: cleanOCR,
                 sourceLanguage: currentProfile.sourceLanguage,
-                targetLanguage: currentProfile.targetLanguage,
-                engineType: currentProfile.translationEngineType,
-                geminiApiKey: currentProfile.geminiApiKey
+                targetLanguage: currentProfile.targetLanguage
             )
 
             self.lastTranslatedText = translated
