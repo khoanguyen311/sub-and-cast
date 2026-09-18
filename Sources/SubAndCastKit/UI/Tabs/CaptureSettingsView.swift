@@ -8,6 +8,26 @@ public struct CaptureSettingsView: View {
         self.appState = appState
     }
 
+    private var previewImage: NSImage? {
+        if let image = NSImage(named: "GamePreviewMockup") {
+            return image
+        }
+        if let image = NSImage(named: "game_preview") {
+            return image
+        }
+        #if SWIFT_PACKAGE
+        if let url = Bundle.module.url(forResource: "game_preview", withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            return image
+        }
+        #endif
+        if let url = Bundle.main.url(forResource: "game_preview", withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            return image
+        }
+        return nil
+    }
+
     public var body: some View {
         Form {
             // MARK: - Zone Positioning & Manual Coordinates
@@ -107,64 +127,38 @@ public struct CaptureSettingsView: View {
                 // Live Subtitle Preview Canvas
                 VStack(spacing: 0) {
                     ZStack {
-                        // Rich in-game cinematic background scene
-                        ZStack {
+                        if let image = previewImage {
+                            Image(nsImage: image)
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            // Fallback gradient scene if image is not yet added
                             LinearGradient(
-                                colors: [
-                                    Color(red: 0.08, green: 0.10, blue: 0.22),
-                                    Color(red: 0.18, green: 0.10, blue: 0.28),
-                                    Color(red: 0.10, green: 0.20, blue: 0.26)
-                                ],
+                                colors: [Color(hex: "1f2937"), Color(hex: "111827"), Color(hex: "374151")],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
-
-                            // Ambient lighting glows (warm amber at bottom-left, neon cyan at top-right)
-                            RadialGradient(
-                                colors: [Color(red: 0.85, green: 0.45, blue: 0.15).opacity(0.45), .clear],
-                                center: .bottomLeading,
-                                startRadius: 10,
-                                endRadius: 120
-                            )
-
-                            RadialGradient(
-                                colors: [Color(red: 0.15, green: 0.75, blue: 0.95).opacity(0.40), .clear],
-                                center: .topTrailing,
-                                startRadius: 10,
-                                endRadius: 140
-                            )
-
-                            // Subtle in-game landscape ground silhouette
-                            Path { path in
-                                path.move(to: CGPoint(x: 0, y: 74))
-                                path.addLine(to: CGPoint(x: 180, y: 48))
-                                path.addLine(to: CGPoint(x: 360, y: 62))
-                                path.addLine(to: CGPoint(x: 540, y: 42))
-                                path.addLine(to: CGPoint(x: 540, y: 74))
-                                path.closeSubpath()
-                            }
-                            .fill(Color(white: 0.05).opacity(0.55))
                         }
 
                         // Live Subtitle Box preview
                         Text("Xin chào thế giới / Hello World")
                             .font(.system(size: appState.currentProfile.fontSize, weight: .medium, design: .rounded))
                             .foregroundColor(.white)
-                            .shadow(color: .black.opacity(0.8), radius: 1, x: 0, y: 1)
+                            .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 6)
                             .background(
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
-                                    .shadow(color: .black.opacity(0.4 * appState.currentProfile.backgroundOpacity), radius: 4, x: 0, y: 2)
+                                    .shadow(color: .black.opacity(0.5 * appState.currentProfile.backgroundOpacity), radius: 4, x: 0, y: 2)
                             )
                             .padding(8)
                     }
-                    .frame(height: 74)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .frame(height: 85)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
                             .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                     )
                 }
@@ -222,13 +216,13 @@ struct ZoneCoordinateRow: View {
                     .font(.subheadline.bold())
             }
 
-            HStack(alignment: .center, spacing: 8) {
-                // Cluster 1 - Position
-                HStack(alignment: .center, spacing: 6) {
+            HStack(alignment: .center, spacing: 10) {
+                // Position Group
+                HStack(alignment: .center, spacing: 8) {
                     Text("Pos:")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 30, alignment: .leading)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.primary)
+
                     CoordinateField(label: "X", value: $rect.x, range: 0...4000)
                     CoordinateField(label: "Y", value: $rect.y, range: 0...4000)
                 }
@@ -236,14 +230,14 @@ struct ZoneCoordinateRow: View {
                 // Vertical Divider
                 Divider()
                     .frame(height: 16)
-                    .padding(.horizontal, 2)
+                    .padding(.horizontal, 4)
 
-                // Cluster 2 - Size
-                HStack(alignment: .center, spacing: 6) {
+                // Size Group
+                HStack(alignment: .center, spacing: 8) {
                     Text("Size:")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 30, alignment: .leading)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.primary)
+
                     CoordinateField(label: "W", value: $rect.width, range: Int(CodableRect.minWidth)...3000)
                     CoordinateField(label: "H", value: $rect.height, range: Int(CodableRect.minHeight)...1500)
                 }
@@ -268,20 +262,44 @@ struct CoordinateField: View {
     var body: some View {
         HStack(alignment: .center, spacing: 4) {
             Text(label)
-                .font(.caption2.bold())
-                .foregroundColor(.secondary)
-                .frame(width: 14, alignment: .leading)
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
 
             TextField("", value: intBinding, format: .number)
                 .textFieldStyle(.roundedBorder)
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
-                .frame(width: 56, height: 22)
+                .frame(width: 52, height: 22)
 
             Stepper("", value: intBinding, in: range, step: 1)
                 .labelsHidden()
                 .frame(height: 22)
         }
         .frame(height: 24)
+    }
+}
+
+// MARK: - Color Hex Initializer
+private extension Color {
+    init(hex: String) {
+        let cleanHex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: cleanHex).scanHexInt64(&int)
+        let r, g, b, a: Double
+        switch cleanHex.count {
+        case 6:
+            r = Double((int >> 16) & 0xFF) / 255
+            g = Double((int >> 8) & 0xFF) / 255
+            b = Double(int & 0xFF) / 255
+            a = 1.0
+        case 8:
+            r = Double((int >> 24) & 0xFF) / 255
+            g = Double((int >> 16) & 0xFF) / 255
+            b = Double((int >> 8) & 0xFF) / 255
+            a = Double(int & 0xFF) / 255
+        default:
+            r = 0.12; g = 0.16; b = 0.22; a = 1.0
+        }
+        self.init(.sRGB, red: r, green: g, blue: b, opacity: a)
     }
 }

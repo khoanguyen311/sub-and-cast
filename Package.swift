@@ -23,7 +23,8 @@ let package = Package(
     targets: [
         .target(
             name: "SubAndCastKit",
-            dependencies: []
+            dependencies: [],
+            resources: [.process("Resources")]
         ),
         .executableTarget(
             name: "SubAndCast",

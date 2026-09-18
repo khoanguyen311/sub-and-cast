@@ -17,6 +17,7 @@ mkdir -p "$MACOS_DIR"
 mkdir -p "$RESOURCES_DIR"
 
 cp "$BUILD_DIR/$APP_NAME" "$MACOS_DIR/$APP_NAME"
+cp Sources/SubAndCastKit/Resources/* "$RESOURCES_DIR/" 2>/dev/null || true
 
 cat <<EOF > "$CONTENTS_DIR/Info.plist"
 <?xml version="1.0" encoding="UTF-8"?>
