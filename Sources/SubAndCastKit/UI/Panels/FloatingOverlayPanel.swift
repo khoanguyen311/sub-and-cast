@@ -10,14 +10,18 @@ public class FloatingOverlayPanel: NSPanel {
             defer: false
         )
 
-        self.level = .floating
+        self.level = .screenSaver
+        self.hidesOnDeactivate = false
+        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         self.isOpaque = false
         self.backgroundColor = .clear
         self.hasShadow = false
         self.isMovableByWindowBackground = true
-        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         self.acceptsMouseMovedEvents = true
     }
+
+    override public var canBecomeKey: Bool { false }
+    override public var canBecomeMain: Bool { false }
 
     public func setLocked(_ locked: Bool) {
         self.ignoresMouseEvents = locked
