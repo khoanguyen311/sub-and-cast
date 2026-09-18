@@ -149,6 +149,27 @@ public final class AppState: ObservableObject {
         }
     }
 
+    private var debouncedSaveTask: Task<Void, Never>?
+
+    public func scheduleSaveCurrentProfile() {
+        debouncedSaveTask?.cancel()
+        debouncedSaveTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+            guard !Task.isCancelled, let self = self else { return }
+            self.saveCurrentProfile()
+        }
+    }
+
+    public func updateSourceRectLive(_ rect: CGRect) {
+        currentProfile.sourceRect = CodableRect(cgRect: rect)
+        scheduleSaveCurrentProfile()
+    }
+
+    public func updateDisplayRectLive(_ rect: CGRect) {
+        currentProfile.displayRect = CodableRect(cgRect: rect)
+        scheduleSaveCurrentProfile()
+    }
+
     public func updateSourceRect(_ rect: CGRect) {
         currentProfile.sourceRect = CodableRect(cgRect: rect)
         saveCurrentProfile()

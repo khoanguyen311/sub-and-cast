@@ -118,9 +118,16 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    private var isProgrammaticUpdate = false
+    private var isUserDraggingOrResizing = false
+
     private func updatePanelPositions(from profile: GameProfile) {
+        guard !isUserDraggingOrResizing else { return }
         guard let screen = NSScreen.main else { return }
         let screenHeight = screen.frame.height
+
+        isProgrammaticUpdate = true
+        defer { isProgrammaticUpdate = false }
 
         let src = profile.sourceRect.cgRect
         let srcAppKit = NSRect(x: src.origin.x, y: screenHeight - src.origin.y - src.height, width: src.width, height: src.height)
@@ -136,6 +143,15 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
     }
 
     // MARK: - NSWindowDelegate
+    public func windowWillStartLiveResize(_ notification: Notification) {
+        isUserDraggingOrResizing = true
+    }
+
+    public func windowDidEndLiveResize(_ notification: Notification) {
+        isUserDraggingOrResizing = false
+        AppState.shared.saveCurrentProfile()
+    }
+
     public func windowDidMove(_ notification: Notification) {
         handleWindowFrameChange(notification)
     }
@@ -145,6 +161,7 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
     }
 
     private func handleWindowFrameChange(_ notification: Notification) {
+        guard !isProgrammaticUpdate else { return }
         guard let window = notification.object as? NSWindow,
               let screen = NSScreen.main else { return }
 
@@ -160,9 +177,9 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
 
         let appState = AppState.shared
         if window == sourcePanel {
-            appState.updateSourceRect(cgRect)
+            appState.updateSourceRectLive(cgRect)
         } else if window == subtitlePanel {
-            appState.updateDisplayRect(cgRect)
+            appState.updateDisplayRectLive(cgRect)
         }
     }
 }

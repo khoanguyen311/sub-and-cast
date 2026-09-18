@@ -66,20 +66,6 @@ public struct GeneralSettingsView: View {
             } header: {
                 Text("Game Profiles")
             }
-
-            Section {
-                LabeledContent("Auto-Scan (Start / Pause)") {
-                    Text("⌘⇧S").font(.callout.monospaced()).foregroundColor(.secondary)
-                }
-                LabeledContent("Snapshot Capture") {
-                    Text("⌘⇧T").font(.callout.monospaced()).foregroundColor(.secondary)
-                }
-                LabeledContent("Position / Lock Overlays") {
-                    Text("⌘⇧L").font(.callout.monospaced()).foregroundColor(.secondary)
-                }
-            } header: {
-                Text("Global Hotkeys (In-Game)")
-            }
         }
         .formStyle(.grouped)
     }

@@ -33,7 +33,7 @@ public struct SettingsView: View {
                 tabStrip
                 Spacer()
             }
-            .padding(.top, 14)
+            .padding(.top, 12)
             .padding(.bottom, 8)
             .background(Color(NSColor.windowBackgroundColor))
 
@@ -54,9 +54,6 @@ public struct SettingsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 6)
 
             Divider()
 
@@ -67,7 +64,6 @@ public struct SettingsView: View {
                 .background(Color(NSColor.windowBackgroundColor))
         }
         .frame(width: 540, height: 500)
-        .fixedSize(horizontal: true, vertical: true)
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .onChange(of: appState.currentProfile) { _, _ in
             appState.saveCurrentProfile()
@@ -143,7 +139,7 @@ public struct SettingsView: View {
                     Label("Snapshot", systemImage: "camera")
                 }
                 .controlSize(.regular)
-                .help("Capture and translate a single frame (⌘T)")
+                .help("Capture and translate a single frame")
 
                 Button {
                     appState.toggleScanning()
@@ -154,7 +150,7 @@ public struct SettingsView: View {
                     )
                 }
                 .controlSize(.regular)
-                .help(appState.isScanning ? "Pause auto-scan (⌘S)" : "Start continuous auto-scan (⌘S)")
+                .help(appState.isScanning ? "Pause auto-scan" : "Start continuous auto-scan")
 
                 if appState.isPositioningOverlays {
                     Button {
@@ -165,7 +161,7 @@ public struct SettingsView: View {
                     .controlSize(.regular)
                     .buttonStyle(.borderedProminent)
                     .tint(.green)
-                    .help("Save positions and lock overlays (⌘L)")
+                    .help("Save positions and lock overlays")
                 } else {
                     Button {
                         appState.startPositioningOverlays()
@@ -173,7 +169,7 @@ public struct SettingsView: View {
                         Label("Position", systemImage: "viewfinder")
                     }
                     .controlSize(.regular)
-                    .help("Show draggable overlay boxes on screen (⌘L)")
+                    .help("Show draggable overlay boxes on screen")
                 }
             }
         }

@@ -21,5 +21,6 @@ public class FloatingOverlayPanel: NSPanel {
 
     public func setLocked(_ locked: Bool) {
         self.ignoresMouseEvents = locked
+        self.isMovableByWindowBackground = !locked
     }
 }

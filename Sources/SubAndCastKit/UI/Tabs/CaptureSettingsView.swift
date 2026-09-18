@@ -11,15 +11,8 @@ public struct CaptureSettingsView: View {
         Form {
             // MARK: - Zone Positioning & Manual Coordinates
             Section {
-                // Header row with Action buttons
+                // Header row with Action buttons neatly aligned to the top-right
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Zone Coordinates")
-                            .font(.body)
-                        Text(appState.isPositioningOverlays ? "Drag/resize on screen or edit values below." : "Fine-tune pixel coordinates or position on-screen.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
                     Spacer()
 
                     HStack(spacing: 8) {
@@ -28,6 +21,7 @@ public struct CaptureSettingsView: View {
                         } label: {
                             Label("Reset", systemImage: "arrow.counterclockwise")
                         }
+                        .controlSize(.small)
                         .help("Reset both overlay zones to centered defaults")
 
                         if appState.isPositioningOverlays {
@@ -38,12 +32,14 @@ public struct CaptureSettingsView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(.green)
+                            .controlSize(.small)
                         } else {
                             Button(action: {
                                 appState.startPositioningOverlays()
                             }) {
                                 Label("Position", systemImage: "viewfinder")
                             }
+                            .controlSize(.small)
                         }
                     }
                 }
@@ -139,7 +135,7 @@ struct ZoneCoordinateRow: View {
                     .font(.subheadline.bold())
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 CoordinateField(label: "X", value: $rect.x, range: 0...4000)
                 CoordinateField(label: "Y", value: $rect.y, range: 0...4000)
                 CoordinateField(label: "W", value: $rect.width, range: 80...3000)
@@ -163,7 +159,7 @@ struct CoordinateField: View {
     }
 
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: 2) {
             Text(label)
                 .font(.caption2.bold())
                 .foregroundColor(.secondary)
@@ -171,12 +167,14 @@ struct CoordinateField: View {
 
             TextField("", value: intBinding, format: .number)
                 .textFieldStyle(.roundedBorder)
+                .controlSize(.small)
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
-                .frame(width: 52)
+                .frame(width: 48)
 
             Stepper("", value: intBinding, in: range, step: 10)
                 .labelsHidden()
+                .controlSize(.small)
         }
     }
 }
