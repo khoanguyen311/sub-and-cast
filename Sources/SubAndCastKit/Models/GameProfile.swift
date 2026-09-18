@@ -34,6 +34,7 @@ public struct GameProfile: Codable, Identifiable, Equatable {
     public var sourceLanguage: String // default: "en"
     public var targetLanguage: String // default: "vi"
     public var translationEngineType: String // "apple" or "google_free"
+    public var ocrEngineType: String // "apple_vision"
     public var captureIntervalSeconds: Double
     public var fadeTimeoutSeconds: Double
     public var fontSize: CGFloat
@@ -47,6 +48,7 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         sourceLanguage: String = "en",
         targetLanguage: String = "vi",
         translationEngineType: String = "apple",
+        ocrEngineType: String = OCREngine.appleVision.rawValue,
         captureIntervalSeconds: Double = 0.8,
         fadeTimeoutSeconds: Double = 4.0,
         fontSize: CGFloat = 20.0,
@@ -59,6 +61,7 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         self.sourceLanguage = sourceLanguage
         self.targetLanguage = targetLanguage
         self.translationEngineType = translationEngineType
+        self.ocrEngineType = ocrEngineType
         self.captureIntervalSeconds = captureIntervalSeconds
         self.fadeTimeoutSeconds = fadeTimeoutSeconds
         self.fontSize = fontSize
@@ -74,6 +77,7 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         self.sourceLanguage = try container.decodeIfPresent(String.self, forKey: .sourceLanguage) ?? "en"
         self.targetLanguage = try container.decodeIfPresent(String.self, forKey: .targetLanguage) ?? "vi"
         self.translationEngineType = try container.decodeIfPresent(String.self, forKey: .translationEngineType) ?? "apple"
+        self.ocrEngineType = try container.decodeIfPresent(String.self, forKey: .ocrEngineType) ?? OCREngine.appleVision.rawValue
         self.captureIntervalSeconds = try container.decodeIfPresent(Double.self, forKey: .captureIntervalSeconds) ?? 0.8
         self.fadeTimeoutSeconds = try container.decodeIfPresent(Double.self, forKey: .fadeTimeoutSeconds) ?? 4.0
         self.fontSize = try container.decodeIfPresent(CGFloat.self, forKey: .fontSize) ?? 20.0

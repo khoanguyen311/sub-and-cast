@@ -6,6 +6,7 @@ public struct TranslationSettingsView: View {
     @AppStorage("defaultSourceLanguage") private var storedSourceLanguage: String = "en"
     @AppStorage("defaultTargetLanguage") private var storedTargetLanguage: String = "vi"
     @AppStorage("defaultTranslationProvider") private var storedTranslationProvider: String = "apple"
+    @AppStorage("defaultOCREngine") private var storedOCREngine: String = OCREngine.appleVision.rawValue
 
     private let supportedLanguages = [
         ("en", "English"),
@@ -26,6 +27,7 @@ public struct TranslationSettingsView: View {
     public var body: some View {
         Form {
             Section {
+                // Row 1: Source Language
                 Picker("Source Language", selection: Binding(
                     get: { appState.currentProfile.sourceLanguage },
                     set: {
@@ -38,6 +40,7 @@ public struct TranslationSettingsView: View {
                     }
                 }
 
+                // Row 2: Target Language
                 Picker("Target Language", selection: Binding(
                     get: { appState.currentProfile.targetLanguage },
                     set: {
@@ -50,7 +53,8 @@ public struct TranslationSettingsView: View {
                     }
                 }
 
-                Picker("Translation Provider", selection: Binding(
+                // Row 3: Translation Engine
+                Picker("Translation Engine", selection: Binding(
                     get: { appState.currentProfile.translationEngineType },
                     set: {
                         appState.currentProfile.translationEngineType = $0
@@ -60,30 +64,33 @@ public struct TranslationSettingsView: View {
                     Text("Apple Native Translation").tag("apple")
                     Text("Google Translate").tag("google_free")
                 }
+
+                // Row 4: OCR Engine (extensible via OCREngine enum)
+                Picker("OCR Engine", selection: Binding(
+                    get: { appState.currentProfile.ocrEngineType },
+                    set: {
+                        appState.currentProfile.ocrEngineType = $0
+                        storedOCREngine = $0
+                    }
+                )) {
+                    ForEach(OCREngine.allCases) { engine in
+                        Text(engine.displayName).tag(engine.rawValue)
+                    }
+                }
             } header: {
                 Text("Languages & Engine")
-            }
-
-            Section {
-                LabeledContent("Translation Engine") {
-                    HStack(spacing: 6) {
-                        Image(systemName: appState.currentProfile.translationEngineType == "apple" ? "apple.logo" : "globe")
-                            .foregroundColor(appState.currentProfile.translationEngineType == "apple" ? .primary : .blue)
-                        Text(appState.currentProfile.translationEngineType == "apple" ? "Apple Native Translation (Offline/macOS 15+)" : "Google Translate (Free Web API)")
-                            .foregroundColor(.secondary)
+            } footer: {
+                VStack(alignment: .leading, spacing: 4) {
+                    if appState.currentProfile.translationEngineType == "apple" {
+                        Text("Apple Native Translation runs 100% on-device on macOS 15+ (automatically falls back to Google Translate if offline language models are unavailable).")
+                    } else {
+                        Text("Google Translate connects via free web endpoint with zero configuration required.")
                     }
+                    Text("OCR runs on-device using the Apple Silicon Neural Engine via the Vision framework.")
                 }
-
-                LabeledContent("Vision OCR Engine") {
-                    HStack(spacing: 6) {
-                        Image(systemName: "cpu")
-                            .foregroundColor(.green)
-                        Text("Apple Neural Engine (Vision Framework)")
-                            .foregroundColor(.secondary)
-                    }
-                }
-            } header: {
-                Text("Provider Details")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.top, 4)
             }
         }
         .formStyle(.grouped)

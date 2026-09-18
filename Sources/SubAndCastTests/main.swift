@@ -47,6 +47,7 @@ struct TestRunner {
             assertTest(defaultProfile.sourceLanguage == "en", "GameProfile default source language is English (en)")
             assertTest(defaultProfile.targetLanguage == "vi", "GameProfile default target language is Vietnamese (vi)")
             assertTest(defaultProfile.translationEngineType == "apple", "GameProfile default translation engine is Apple Native")
+            assertTest(defaultProfile.ocrEngineType == OCREngine.appleVision.rawValue, "GameProfile default OCR engine is Apple Neural Engine (Vision)")
         } catch {
             print("  ❌ [FAIL] GameProfile Serialization Error: \(error)")
             failed += 1
