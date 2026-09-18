@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct CaptureSettingsView: View {
     @ObservedObject var appState: AppState
+    @State private var showingResetAlert = false
 
     public init(appState: AppState) {
         self.appState = appState
@@ -11,57 +12,67 @@ public struct CaptureSettingsView: View {
         Form {
             // MARK: - Zone Positioning & Manual Coordinates
             Section {
-                // 1. OCR Capture Area (Source)
-                ZoneCoordinateRow(
-                    title: "OCR Capture Area (Source)",
-                    iconName: "viewfinder",
-                    iconColor: .cyan,
-                    rect: $appState.currentProfile.sourceRect
-                )
+                VStack(alignment: .leading, spacing: 12) {
+                    // 1. OCR Capture Area (Source)
+                    ZoneCoordinateRow(
+                        title: "OCR Capture Area (Source)",
+                        iconName: "viewfinder",
+                        iconColor: .cyan,
+                        rect: $appState.currentProfile.sourceRect
+                    )
 
-                // 2. Subtle hairline Divider
-                Divider()
-                    .padding(.vertical, 2)
+                    // 2. Clean Hairline Divider
+                    Divider()
+                        .padding(.vertical, 2)
 
-                // 3. Subtitle Display Area (Target)
-                ZoneCoordinateRow(
-                    title: "Subtitle Display Area (Target)",
-                    iconName: "captions.bubble",
-                    iconColor: .orange,
-                    rect: $appState.currentProfile.displayRect
-                )
+                    // 3. Subtitle Display Area (Target)
+                    ZoneCoordinateRow(
+                        title: "Subtitle Display Area (Target)",
+                        iconName: "captions.bubble",
+                        iconColor: .orange,
+                        rect: $appState.currentProfile.displayRect
+                    )
 
-                // 4. Bottom action row aligned to the bottom-right
-                HStack(spacing: 8) {
-                    Spacer()
+                    // 4. Action Row Aligned to Bottom-Right
+                    HStack(spacing: 8) {
+                        Spacer()
 
-                    Button {
-                        appState.resetOverlayZonesToDefault()
-                    } label: {
-                        Label("Reset", systemImage: "arrow.counterclockwise")
-                    }
-                    .controlSize(.small)
-                    .help("Reset both overlay zones to centered defaults")
-
-                    if appState.isPositioningOverlays {
-                        Button(action: {
-                            appState.finishPositioningOverlays()
-                        }) {
-                            Label("Save & Done", systemImage: "checkmark.circle.fill")
+                        // Secondary Utility Action: Reset
+                        Button {
+                            showingResetAlert = true
+                        } label: {
+                            Label("Reset", systemImage: "arrow.counterclockwise")
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.green)
+                        .buttonStyle(.bordered)
+                        .foregroundStyle(.secondary)
                         .controlSize(.small)
-                    } else {
-                        Button(action: {
-                            appState.startPositioningOverlays()
-                        }) {
-                            Label("Position", systemImage: "viewfinder")
+                        .help("Reset both overlay zones to centered defaults")
+
+                        // Primary Action: Position / Save & Done
+                        if appState.isPositioningOverlays {
+                            Button {
+                                appState.finishPositioningOverlays()
+                            } label: {
+                                Label("Save & Done", systemImage: "checkmark.circle.fill")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.green)
+                            .controlSize(.small)
+                            .help("Save positions and lock overlays")
+                        } else {
+                            Button {
+                                appState.startPositioningOverlays()
+                            } label: {
+                                Label("Position", systemImage: "viewfinder")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                            .help("Show draggable overlay boxes on screen")
                         }
-                        .controlSize(.small)
                     }
+                    .padding(.top, 4)
                 }
-                .padding(.top, 4)
+                .padding(.vertical, 4)
             } header: {
                 Text("Zone Positioning")
             }
@@ -117,6 +128,14 @@ public struct CaptureSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .alert("Reset Overlay Zones?", isPresented: $showingResetAlert) {
+            Button("Reset", role: .destructive) {
+                appState.resetOverlayZonesToDefault()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will reset both the OCR capture zone and subtitle display zone to centered defaults.")
+        }
     }
 }
 
@@ -144,7 +163,6 @@ struct ZoneCoordinateRow: View {
                 CoordinateField(label: "H", value: $rect.height, range: 40...1500)
             }
         }
-        .padding(.vertical, 4)
     }
 }
 

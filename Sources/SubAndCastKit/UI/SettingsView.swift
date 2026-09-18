@@ -63,7 +63,7 @@ public struct SettingsView: View {
                 .padding(.vertical, 10)
                 .background(Color(NSColor.windowBackgroundColor))
         }
-        .frame(width: 540, height: 500)
+        .frame(width: 540, height: 540)
         .navigationTitle("Preferences")
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .onChange(of: appState.currentProfile) { _, _ in
@@ -152,26 +152,6 @@ public struct SettingsView: View {
                 }
                 .controlSize(.regular)
                 .help(appState.isScanning ? "Pause auto-scan" : "Start continuous auto-scan")
-
-                if appState.isPositioningOverlays {
-                    Button {
-                        appState.finishPositioningOverlays()
-                    } label: {
-                        Label("Done", systemImage: "checkmark")
-                    }
-                    .controlSize(.regular)
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
-                    .help("Save positions and lock overlays")
-                } else {
-                    Button {
-                        appState.startPositioningOverlays()
-                    } label: {
-                        Label("Position", systemImage: "viewfinder")
-                    }
-                    .controlSize(.regular)
-                    .help("Show draggable overlay boxes on screen")
-                }
             }
         }
     }
