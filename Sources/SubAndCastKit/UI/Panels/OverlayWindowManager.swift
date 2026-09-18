@@ -160,13 +160,29 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
     private func preWarmSettings(appState: AppState) {
         let window = NSWindow(
             contentRect: NSRect(x: 200, y: 200, width: 540, height: 650),
-            styleMask: [.titled, .closable, .miniaturizable],
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Preferences"
-        window.center()
+        window.minSize = NSSize(width: 480, height: 460)
+        window.maxSize = NSSize(width: 760, height: 900)
         window.isReleasedWhenClosed = false
+        window.setFrameAutosaveName("MainPreferencesWindow")
+
+        if !window.setFrameUsingName("MainPreferencesWindow") {
+            window.center()
+        } else if let screen = NSScreen.main {
+            // Validate saved frame does not violate screen bounds if opened on a different monitor
+            var frame = window.frame
+            let visible = screen.visibleFrame
+            frame.size.width = max(window.minSize.width, min(frame.size.width, min(window.maxSize.width, visible.width)))
+            frame.size.height = max(window.minSize.height, min(frame.size.height, min(window.maxSize.height, visible.height)))
+            frame.origin.x = max(visible.minX, min(frame.origin.x, visible.maxX - frame.size.width))
+            frame.origin.y = max(visible.minY, min(frame.origin.y, visible.maxY - frame.size.height))
+            window.setFrame(frame, display: false)
+        }
+
         window.contentView = NSHostingView(rootView: SettingsView(appState: appState))
         self.settingsWindow = window
     }

@@ -61,9 +61,10 @@ public struct SettingsView: View {
             footerBar
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
                 .background(Color(NSColor.windowBackgroundColor))
         }
-        .frame(width: 540, height: 650)
+        .frame(minWidth: 480, idealWidth: 540, maxWidth: 760, minHeight: 460, idealHeight: 580, maxHeight: 900)
         .navigationTitle("Preferences")
         .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .onChange(of: appState.currentProfile) { _, _ in
