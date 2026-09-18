@@ -13,9 +13,9 @@ public struct CaptureSettingsView: View {
             // MARK: - Zone Positioning & Manual Coordinates
             Section {
                 VStack(alignment: .leading, spacing: 12) {
-                    // 1. OCR Capture Area (Source)
+                    // 1. OCR Capture Area
                     ZoneCoordinateRow(
-                        title: "OCR Capture Area (Source)",
+                        title: "OCR Capture Area",
                         iconName: "viewfinder",
                         iconColor: .cyan,
                         rect: $appState.currentProfile.sourceRect
@@ -25,9 +25,9 @@ public struct CaptureSettingsView: View {
                     Divider()
                         .padding(.vertical, 2)
 
-                    // 3. Subtitle Display Area (Target)
+                    // 3. Subtitle Display Area
                     ZoneCoordinateRow(
-                        title: "Subtitle Display Area (Target)",
+                        title: "Subtitle Display Area",
                         iconName: "captions.bubble",
                         iconColor: .orange,
                         rect: $appState.currentProfile.displayRect
@@ -45,10 +45,10 @@ public struct CaptureSettingsView: View {
                         }
                         .buttonStyle(.bordered)
                         .foregroundStyle(.secondary)
-                        .controlSize(.small)
+                        .controlSize(.regular)
                         .help("Reset both overlay zones to centered defaults")
 
-                        // Primary Action: Position / Save & Done
+                        // Position / Save & Done
                         if appState.isPositioningOverlays {
                             Button {
                                 appState.finishPositioningOverlays()
@@ -57,7 +57,7 @@ public struct CaptureSettingsView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .tint(.green)
-                            .controlSize(.small)
+                            .controlSize(.regular)
                             .help("Save positions and lock overlays")
                         } else {
                             Button {
@@ -65,8 +65,8 @@ public struct CaptureSettingsView: View {
                             } label: {
                                 Label("Position", systemImage: "viewfinder")
                             }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
+                            .buttonStyle(.bordered)
+                            .controlSize(.regular)
                             .help("Show draggable overlay boxes on screen")
                         }
                     }
@@ -156,7 +156,7 @@ struct ZoneCoordinateRow: View {
                     .font(.subheadline.bold())
             }
 
-            HStack(spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
                 CoordinateField(label: "X", value: $rect.x, range: 0...4000)
                 CoordinateField(label: "Y", value: $rect.y, range: 0...4000)
                 CoordinateField(label: "W", value: $rect.width, range: 80...3000)
@@ -179,7 +179,7 @@ struct CoordinateField: View {
     }
 
     var body: some View {
-        HStack(spacing: 2) {
+        HStack(alignment: .center, spacing: 3) {
             Text(label)
                 .font(.caption2.bold())
                 .foregroundColor(.secondary)
@@ -196,5 +196,6 @@ struct CoordinateField: View {
                 .labelsHidden()
                 .controlSize(.small)
         }
+        .frame(height: 22, alignment: .center)
     }
 }

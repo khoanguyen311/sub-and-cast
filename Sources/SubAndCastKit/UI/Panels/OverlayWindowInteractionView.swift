@@ -166,15 +166,10 @@ public struct OverlayBottomRightResizeHandle: View {
             BottomRightResizeNSViewRepresentable()
                 .frame(width: 24, height: 24)
 
-            // Visual handle: inset SF Symbol with subtle rounded backing
+            // Visual handle: clean bare SF Symbol without any background plate
             Image(systemName: "arrow.up.left.and.arrow.down.right")
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(tintColor.opacity(0.85))
-                .frame(width: 20, height: 20)
-                .background(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .fill(Color.black.opacity(0.35))
-                )
                 .allowsHitTesting(false)
         }
         .frame(width: 24, height: 24)
@@ -193,6 +188,10 @@ public struct BottomRightResizeNSViewRepresentable: NSViewRepresentable {
 
 public class BottomRightResizeNSView: NSView {
     private var trackingArea: NSTrackingArea?
+
+    // CRITICAL: Prevent Cocoa from moving the window when clicking/dragging the resize handle
+    public override var mouseDownCanMoveWindow: Bool { false }
+    public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     public static var diagonalResizeCursor: NSCursor {
         let sel = NSSelectorFromString("_windowResizeNorthWestSouthEastCursor")
@@ -228,8 +227,14 @@ public class BottomRightResizeNSView: NSView {
     }
 
     public override func hitTest(_ point: NSPoint) -> NSView? {
-        let localPoint = convert(point, from: superview)
-        return bounds.contains(localPoint) ? self : nil
+        if let hit = super.hitTest(point) {
+            return hit
+        }
+        if let superview = self.superview {
+            let localPoint = convert(point, from: superview)
+            return bounds.contains(localPoint) ? self : nil
+        }
+        return bounds.contains(point) ? self : nil
     }
 
     public override func mouseDown(with event: NSEvent) {

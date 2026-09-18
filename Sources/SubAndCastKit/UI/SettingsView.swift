@@ -132,27 +132,17 @@ public struct SettingsView: View {
 
             Spacer()
 
-            // Compact runtime trigger buttons with SF symbols
-            HStack(spacing: 8) {
-                Button {
-                    appState.triggerSnapshot()
-                } label: {
-                    Label("Snapshot", systemImage: "camera")
-                }
-                .controlSize(.regular)
-                .help("Capture and translate a single frame")
-
-                Button {
-                    appState.toggleScanning()
-                } label: {
-                    Label(
-                        appState.isScanning ? "Pause" : "Scan",
-                        systemImage: appState.isScanning ? "pause.fill" : "play.fill"
-                    )
-                }
-                .controlSize(.regular)
-                .help(appState.isScanning ? "Pause auto-scan" : "Start continuous auto-scan")
+            // Runtime scan trigger button
+            Button {
+                appState.toggleScanning()
+            } label: {
+                Label(
+                    appState.isScanning ? "Pause" : "Scan",
+                    systemImage: appState.isScanning ? "pause.fill" : "play.fill"
+                )
             }
+            .controlSize(.regular)
+            .help(appState.isScanning ? "Pause auto-scan" : "Start continuous auto-scan")
         }
     }
 
