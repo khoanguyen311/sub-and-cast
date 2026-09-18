@@ -226,6 +226,8 @@ struct ZoneCoordinateRow: View {
 
                 CoordinateField(label: "W:", value: $rect.width, range: Int(CodableRect.minWidth)...3000)
                 CoordinateField(label: "H:", value: $rect.height, range: Int(CodableRect.minHeight)...1500)
+
+                Spacer()
             }
             .controlSize(.small)
         }
@@ -249,6 +251,7 @@ struct CoordinateField: View {
             Text(label)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+                .fixedSize()
 
             TextField("", value: intBinding, format: .number)
                 .textFieldStyle(.roundedBorder)
@@ -261,6 +264,7 @@ struct CoordinateField: View {
                 .frame(height: 22)
         }
         .frame(height: 24)
+        .fixedSize()
     }
 }
 
