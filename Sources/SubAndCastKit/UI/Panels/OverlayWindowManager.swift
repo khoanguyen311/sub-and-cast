@@ -97,12 +97,12 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
     // without showing it, so the first call to showSettings() is lag-free.
     private func preWarmSettings(appState: AppState) {
         let window = NSWindow(
-            contentRect: NSRect(x: 200, y: 200, width: 520, height: 440),
-            styleMask: [.titled, .closable],
+            contentRect: NSRect(x: 200, y: 200, width: 540, height: 500),
+            styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
         )
-        window.title = "Sub & Cast — Preferences"
+        window.title = "Sub & Cast Preferences"
         window.center()
         window.isReleasedWhenClosed = false
         window.contentView = NSHostingView(rootView: SettingsView(appState: appState))

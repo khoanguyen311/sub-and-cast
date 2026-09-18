@@ -3,7 +3,7 @@ import SwiftUI
 public enum SettingsTab: String, CaseIterable, Identifiable {
     case general = "General"
     case translation = "Translation"
-    case captureAndOverlays = "Capture & Overlays"
+    case capture = "Capture & Overlays"
 
     public var id: String { rawValue }
 
@@ -11,7 +11,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gearshape"
         case .translation: return "bubble.left.and.bubble.right"
-        case .captureAndOverlays: return "viewfinder"
+        case .capture: return "viewfinder"
         }
     }
 }
@@ -19,24 +19,7 @@ public enum SettingsTab: String, CaseIterable, Identifiable {
 public struct SettingsView: View {
     @ObservedObject var appState: AppState
     @State private var selectedTab: SettingsTab = .general
-    @State private var newProfileName: String = ""
-
-    // Persistent @AppStorage defaults as requested (default source: en, default target: vi, provider: apple)
-    @AppStorage("defaultSourceLanguage") private var storedSourceLanguage: String = "en"
-    @AppStorage("defaultTargetLanguage") private var storedTargetLanguage: String = "vi"
-    @AppStorage("defaultTranslationProvider") private var storedTranslationProvider: String = "apple"
-
-    private let supportedLanguages = [
-        ("en", "English"),
-        ("vi", "Vietnamese (Tiếng Việt)"),
-        ("ja", "Japanese (日本語)"),
-        ("zh-Hans", "Chinese Simplified (简体中文)"),
-        ("zh-Hant", "Chinese Traditional (繁體中文)"),
-        ("ko", "Korean (한국어)"),
-        ("fr", "French (Français)"),
-        ("de", "German (Deutsch)"),
-        ("es", "Spanish (Español)")
-    ]
+    @Namespace private var tabAnimation
 
     public init(appState: AppState) {
         self.appState = appState
@@ -44,276 +27,94 @@ public struct SettingsView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
+            // MARK: - In-Window Horizontal Tab Strip
+            HStack {
+                Spacer()
+                tabStrip
+                Spacer()
+            }
+            .padding(.top, 14)
+            .padding(.bottom, 8)
+            .background(Color(NSColor.windowBackgroundColor))
+
+            Divider()
+
+            // MARK: - Modular Content Area
             Group {
                 switch selectedTab {
                 case .general:
-                    generalTab
+                    GeneralSettingsView(appState: appState)
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 case .translation:
-                    translationTab
-                case .captureAndOverlays:
-                    captureAndOverlaysTab
+                    TranslationSettingsView(appState: appState)
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                case .capture:
+                    CaptureSettingsView(appState: appState)
+                        .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 16)
-            .padding(.top, 12)
+            .padding(.top, 8)
             .padding(.bottom, 6)
 
             Divider()
 
+            // MARK: - Bottom Action & Status Footer
             footerBar
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
                 .background(Color(NSColor.windowBackgroundColor))
         }
-        .frame(width: 520, height: 440)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Picker("Preferences Tab", selection: $selectedTab) {
-                    ForEach(SettingsTab.allCases) { tab in
-                        Label(tab.rawValue, systemImage: tab.iconName)
-                            .tag(tab)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(width: 380)
-            }
-        }
-        .onAppear {
-            syncWithStoredDefaults()
-        }
+        .frame(width: 540, height: 500)
+        .fixedSize(horizontal: true, vertical: true)
+        .animation(.easeInOut(duration: 0.2), value: selectedTab)
         .onChange(of: appState.currentProfile) { _, _ in
             appState.saveCurrentProfile()
         }
     }
 
-    private func syncWithStoredDefaults() {
-        if appState.currentProfile.sourceLanguage.isEmpty {
-            appState.currentProfile.sourceLanguage = storedSourceLanguage
-        }
-        if appState.currentProfile.targetLanguage.isEmpty {
-            appState.currentProfile.targetLanguage = storedTargetLanguage
-        }
-        if appState.currentProfile.translationEngineType.isEmpty {
-            appState.currentProfile.translationEngineType = storedTranslationProvider
-        }
-    }
-
-    // MARK: - Tab 1: General
-    private var generalTab: some View {
-        Form {
-            Section {
-                HStack(spacing: 8) {
-                    Picker("Active Profile", selection: Binding(
-                        get: { appState.currentProfile.id },
-                        set: { id in
-                            if let found = appState.profiles.first(where: { $0.id == id }) {
-                                appState.selectProfile(found)
-                            }
-                        }
-                    )) {
-                        ForEach(appState.profiles) { profile in
-                            Text(profile.name).tag(profile.id)
-                        }
+    // MARK: - Horizontal Segmented Pill Strip
+    private var tabStrip: some View {
+        HStack(spacing: 4) {
+            ForEach(SettingsTab.allCases) { tab in
+                let isSelected = selectedTab == tab
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        selectedTab = tab
                     }
-
-                    if appState.profiles.count > 1 {
-                        Button(role: .destructive) {
-                            appState.deleteProfile(id: appState.currentProfile.id)
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .help("Delete active profile")
-                    }
-                }
-
-                LabeledContent("New Profile") {
-                    HStack(spacing: 8) {
-                        TextField("Profile Name", text: $newProfileName)
-                            .textFieldStyle(.roundedBorder)
-
-                        Button("Add") {
-                            let trimmed = newProfileName.trimmingCharacters(in: .whitespacesAndNewlines)
-                            if !trimmed.isEmpty {
-                                appState.addNewProfile(name: trimmed)
-                                newProfileName = ""
-                            }
-                        }
-                        .disabled(newProfileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    }
-                }
-            } header: {
-                Text("Game Profiles")
-            }
-
-            Section {
-                LabeledContent("Auto-Scan") {
-                    Text("⌘S").font(.callout.monospaced()).foregroundColor(.secondary)
-                }
-                LabeledContent("Snapshot Capture") {
-                    Text("⌘T").font(.callout.monospaced()).foregroundColor(.secondary)
-                }
-                LabeledContent("Position / Lock Overlays") {
-                    Text("⌘L").font(.callout.monospaced()).foregroundColor(.secondary)
-                }
-            } header: {
-                Text("Keyboard Shortcuts")
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    // MARK: - Tab 2: Translation
-    private var translationTab: some View {
-        Form {
-            Section {
-                Picker("Source Language", selection: Binding(
-                    get: { appState.currentProfile.sourceLanguage },
-                    set: {
-                        appState.currentProfile.sourceLanguage = $0
-                        storedSourceLanguage = $0
-                    }
-                )) {
-                    ForEach(supportedLanguages, id: \.0) { code, name in
-                        Text(name).tag(code)
-                    }
-                }
-
-                Picker("Target Language", selection: Binding(
-                    get: { appState.currentProfile.targetLanguage },
-                    set: {
-                        appState.currentProfile.targetLanguage = $0
-                        storedTargetLanguage = $0
-                    }
-                )) {
-                    ForEach(supportedLanguages, id: \.0) { code, name in
-                        Text(name).tag(code)
-                    }
-                }
-
-                Picker("Translation Provider", selection: Binding(
-                    get: { appState.currentProfile.translationEngineType },
-                    set: {
-                        appState.currentProfile.translationEngineType = $0
-                        storedTranslationProvider = $0
-                    }
-                )) {
-                    Text("Apple Native Translation").tag("apple")
-                    Text("Google Translate").tag("google_free")
-                }
-            } header: {
-                Text("Languages & Engine")
-            }
-
-            Section {
-                LabeledContent("Translation Engine") {
+                } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: appState.currentProfile.translationEngineType == "apple" ? "apple.logo" : "globe")
-                            .foregroundColor(appState.currentProfile.translationEngineType == "apple" ? .primary : .blue)
-                        Text(appState.currentProfile.translationEngineType == "apple" ? "Apple Native Translation (Offline/macOS 15+)" : "Google Translate (Free Web API)")
-                            .foregroundColor(.secondary)
+                        Image(systemName: tab.iconName)
+                            .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                        Text(tab.rawValue)
+                            .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
                     }
-                }
-
-                LabeledContent("Vision OCR Engine") {
-                    HStack(spacing: 6) {
-                        Image(systemName: "cpu")
-                            .foregroundColor(.green)
-                        Text("Apple Neural Engine (Vision Framework)")
-                            .foregroundColor(.secondary)
-                    }
-                }
-            } header: {
-                Text("Provider Details")
-            }
-        }
-        .formStyle(.grouped)
-    }
-
-    // MARK: - Tab 3: Capture & Overlays
-    private var captureAndOverlaysTab: some View {
-        Form {
-            Section {
-                HStack {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("On-Screen Overlay Zones")
-                            .font(.body)
-                        Text(appState.isPositioningOverlays ? "Drag and resize boxes on screen, then click Save & Done." : "Adjust the capture area and subtitle display area over your game.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-
-                    if appState.isPositioningOverlays {
-                        Button(action: {
-                            appState.finishPositioningOverlays()
-                        }) {
-                            Label("Save & Done", systemImage: "checkmark.circle.fill")
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.green)
-                    } else {
-                        Button(action: {
-                            appState.startPositioningOverlays()
-                        }) {
-                            Label("Position Overlays", systemImage: "viewfinder")
+                    .foregroundColor(isSelected ? .primary : .secondary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                .fill(Color(NSColor.controlAccentColor).opacity(0.14))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                                        .stroke(Color(NSColor.controlAccentColor).opacity(0.3), lineWidth: 1)
+                                )
+                                .matchedGeometryEffect(id: "activePill", in: tabAnimation)
                         }
                     }
+                    .contentShape(Rectangle())
                 }
-            } header: {
-                Text("Zone Positioning")
-            }
-
-            Section {
-                LabeledContent("Capture Interval") {
-                    HStack(spacing: 12) {
-                        Slider(value: $appState.currentProfile.captureIntervalSeconds, in: 0.3...3.0, step: 0.1)
-                        Text(String(format: "%.1fs", appState.currentProfile.captureIntervalSeconds))
-                            .monospacedDigit()
-                            .foregroundColor(.secondary)
-                            .frame(width: 45, alignment: .trailing)
-                    }
-                }
-
-                LabeledContent("Subtitle Fadeout") {
-                    HStack(spacing: 12) {
-                        Slider(value: $appState.currentProfile.fadeTimeoutSeconds, in: 1.0...10.0, step: 0.5)
-                        Text(String(format: "%.1fs", appState.currentProfile.fadeTimeoutSeconds))
-                            .monospacedDigit()
-                            .foregroundColor(.secondary)
-                            .frame(width: 45, alignment: .trailing)
-                    }
-                }
-            } header: {
-                Text("Timings")
-            }
-
-            Section {
-                LabeledContent("Font Size") {
-                    HStack(spacing: 12) {
-                        Slider(value: $appState.currentProfile.fontSize, in: 14...36, step: 1)
-                        Text("\(Int(appState.currentProfile.fontSize)) pt")
-                            .monospacedDigit()
-                            .foregroundColor(.secondary)
-                            .frame(width: 45, alignment: .trailing)
-                    }
-                }
-
-                LabeledContent("Backdrop Opacity") {
-                    HStack(spacing: 12) {
-                        Slider(value: $appState.currentProfile.backgroundOpacity, in: 0.2...1.0, step: 0.05)
-                        Text("\(Int(appState.currentProfile.backgroundOpacity * 100))%")
-                            .monospacedDigit()
-                            .foregroundColor(.secondary)
-                            .frame(width: 45, alignment: .trailing)
-                    }
-                }
-            } header: {
-                Text("HUD Appearance")
+                .buttonStyle(.plain)
             }
         }
-        .formStyle(.grouped)
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .shadow(color: .black.opacity(0.04), radius: 2, y: 1)
+        )
     }
 
     // MARK: - Footer Status & Actions
@@ -334,7 +135,7 @@ public struct SettingsView: View {
 
             Spacer()
 
-            // Compact runtime trigger buttons with SF symbols (no text truncation)
+            // Compact runtime trigger buttons with SF symbols
             HStack(spacing: 8) {
                 Button {
                     appState.triggerSnapshot()
