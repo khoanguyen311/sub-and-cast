@@ -25,6 +25,11 @@ public struct CaptureSettingsView: View {
            let image = NSImage(contentsOf: url) {
             return image
         }
+        let fallbackPath = "/Users/khoa/personal/sub-and-cast/Sources/SubAndCastKit/Resources/game_preview.png"
+        if FileManager.default.fileExists(atPath: fallbackPath),
+           let image = NSImage(contentsOfFile: fallbackPath) {
+            return image
+        }
         return nil
     }
 
@@ -131,6 +136,8 @@ public struct CaptureSettingsView: View {
                             Image(nsImage: image)
                                 .resizable()
                                 .scaledToFill()
+                                .frame(height: 85)
+                                .clipped()
                         } else {
                             // Fallback gradient scene if image is not yet added
                             LinearGradient(
@@ -141,27 +148,19 @@ public struct CaptureSettingsView: View {
                         }
 
                         // Live Subtitle Box preview
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Xin chào thế giới / Hello World")
-                                .font(.system(size: appState.currentProfile.fontSize, weight: .medium, design: .rounded))
-                                .foregroundColor(.white)
-                                .lineSpacing(4)
-                                .multilineTextAlignment(.leading)
-                                .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.top, 16)
-                        .padding(.leading, 20)
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 16)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
-                                .shadow(color: .black.opacity(0.5 * appState.currentProfile.backgroundOpacity), radius: 4, x: 0, y: 2)
-                        )
-                        .padding(6)
+                        Text("Xin chào thế giới / Hello World")
+                            .font(.system(size: min(28, appState.currentProfile.fontSize), weight: .medium, design: .rounded))
+                            .foregroundColor(.white)
+                            .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
+                                    .shadow(color: .black.opacity(0.5 * appState.currentProfile.backgroundOpacity), radius: 4, x: 0, y: 2)
+                            )
+                            .padding(10)
                     }
                     .frame(height: 85)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
