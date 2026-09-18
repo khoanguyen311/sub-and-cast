@@ -20,7 +20,10 @@ public class FloatingOverlayPanel: NSPanel {
         self.acceptsMouseMovedEvents = true
     }
 
-    override public var canBecomeKey: Bool { false }
+    override public var canBecomeKey: Bool {
+        // Can only become key during unlocked / positioning mode to process keyboard shortcuts
+        return !ignoresMouseEvents
+    }
     override public var canBecomeMain: Bool { false }
 
     public func setLocked(_ locked: Bool) {

@@ -28,7 +28,12 @@ public final class AppState: ObservableObject {
         self.currentProfile = loadedProfiles.first ?? GameProfile()
     }
 
+    private var prePositioningSourceRect: CodableRect?
+    private var prePositioningDisplayRect: CodableRect?
+
     public func startPositioningOverlays() {
+        prePositioningSourceRect = currentProfile.sourceRect
+        prePositioningDisplayRect = currentProfile.displayRect
         isOverlaysVisible = true
         isPositioningOverlays = true
         isLocked = false
@@ -40,6 +45,20 @@ public final class AppState: ObservableObject {
         isLocked = true
         saveCurrentProfile()
         statusMessage = "Overlays Saved & Locked"
+        prePositioningSourceRect = nil
+        prePositioningDisplayRect = nil
+    }
+
+    public func cancelPositioningOverlays() {
+        if let src = prePositioningSourceRect, let dst = prePositioningDisplayRect {
+            currentProfile.sourceRect = src
+            currentProfile.displayRect = dst
+        }
+        isPositioningOverlays = false
+        isLocked = true
+        statusMessage = "Positioning Cancelled"
+        prePositioningSourceRect = nil
+        prePositioningDisplayRect = nil
     }
 
     public func toggleLock() {

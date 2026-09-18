@@ -10,6 +10,9 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
     private var subtitlePanel: FloatingOverlayPanel?
     private var settingsWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
+    private var wasPositioning = false
+    private var localKeyMonitor: Any?
+    private var globalKeyMonitor: Any?
 
     private override init() {
         super.init()
@@ -79,22 +82,77 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
                 guard let self = self else { return }
                 self.updatePanelPositions(from: appState.currentProfile, isPositioning: isPositioning)
                 if isPositioning {
+                    self.wasPositioning = true
+                    self.settingsWindow?.orderOut(nil)
                     self.sourcePanel?.orderFrontRegardless()
+                    self.sourcePanel?.makeKey()
                     self.subtitlePanel?.orderFrontRegardless()
-                } else if isVisible || isScanning {
-                    // During active scanning / dialogue display, source box is hidden from screen
-                    // so it doesn't obstruct the game, while subtitle box is visible
-                    self.sourcePanel?.orderOut(nil as Any?)
-                    self.subtitlePanel?.orderFrontRegardless()
+                    self.startPositioningKeyMonitoring(appState: appState)
                 } else {
-                    self.sourcePanel?.orderOut(nil as Any?)
-                    self.subtitlePanel?.orderOut(nil as Any?)
+                    let shouldRestoreSettings = self.wasPositioning
+                    self.wasPositioning = false
+                    self.stopPositioningKeyMonitoring()
+
+                    if isVisible || isScanning {
+                        // During active scanning / dialogue display, source box is hidden from screen
+                        // so it doesn't obstruct the game, while subtitle box is visible
+                        self.sourcePanel?.orderOut(nil as Any?)
+                        self.subtitlePanel?.orderFrontRegardless()
+                    } else {
+                        self.sourcePanel?.orderOut(nil as Any?)
+                        self.subtitlePanel?.orderOut(nil as Any?)
+                    }
+
+                    if shouldRestoreSettings {
+                        self.showSettings(appState: appState)
+                    }
                 }
             }
             .store(in: &cancellables)
 
         // Pre-warm settings window so first open is instant — build but do NOT show yet
         preWarmSettings(appState: appState)
+    }
+
+    // MARK: - Positioning Keyboard Shortcuts (Escape / Enter)
+    private func startPositioningKeyMonitoring(appState: AppState) {
+        stopPositioningKeyMonitoring()
+
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak appState] event in
+            guard let appState = appState, appState.isPositioningOverlays else { return event }
+            if event.keyCode == 53 { // Escape
+                appState.cancelPositioningOverlays()
+                return nil
+            } else if event.keyCode == 36 || event.keyCode == 76 { // Return / Enter
+                appState.finishPositioningOverlays()
+                return nil
+            }
+            return event
+        }
+
+        globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak appState] event in
+            guard let appState = appState, appState.isPositioningOverlays else { return }
+            if event.keyCode == 53 { // Escape
+                DispatchQueue.main.async {
+                    appState.cancelPositioningOverlays()
+                }
+            } else if event.keyCode == 36 || event.keyCode == 76 { // Return / Enter
+                DispatchQueue.main.async {
+                    appState.finishPositioningOverlays()
+                }
+            }
+        }
+    }
+
+    private func stopPositioningKeyMonitoring() {
+        if let monitor = localKeyMonitor {
+            NSEvent.removeMonitor(monitor)
+            localKeyMonitor = nil
+        }
+        if let monitor = globalKeyMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalKeyMonitor = nil
+        }
     }
 
     // Builds the settings NSWindow and pre-renders its SwiftUI content graph
