@@ -84,7 +84,7 @@ public struct GeneralSettingsView: View {
                 }
 
                 HStack {
-                    Text("Calibrate Overlays (Position)")
+                    Text("Toggle Positioning Mode")
                     Spacer()
                     ShortcutRecorderView(
                         hotkey: $hotkeyManager.togglePositioningHotkey,
@@ -97,8 +97,6 @@ public struct GeneralSettingsView: View {
                 }
             } header: {
                 Text("Global Shortcuts")
-            } footer: {
-                Text("Hotkeys operate globally inside full-screen games without requiring accessibility permissions.")
             }
         }
         .formStyle(.grouped)

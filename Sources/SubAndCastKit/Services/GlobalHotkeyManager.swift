@@ -9,7 +9,7 @@ public enum HotkeyAction: UInt32, CaseIterable, Sendable {
     public var displayName: String {
         switch self {
         case .toggleScan: return "Toggle Auto Scan"
-        case .togglePositioning: return "Calibrate Overlays (Position)"
+        case .togglePositioning: return "Toggle Positioning Mode"
         }
     }
 
