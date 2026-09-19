@@ -172,18 +172,53 @@ struct TestRunner {
                 manager.setHotkey(keyB, for: .togglePositioning)
                 assertTest(manager.togglePositioningHotkey == keyB, "GlobalHotkeyManager sets togglePositioning hotkey")
 
+                let keyC = AppHotkey(keyCode: 40, modifiers: 256) // Cmd + K
+                manager.setHotkey(keyC, for: .oneTimeScan)
+                assertTest(manager.oneTimeScanHotkey == keyC, "GlobalHotkeyManager sets oneTimeScan hotkey")
+
                 // Now assign keyA to togglePositioning; toggleScan should be auto-cleared
                 manager.setHotkey(keyA, for: .togglePositioning)
                 assertTest(manager.togglePositioningHotkey == keyA, "GlobalHotkeyManager updates togglePositioning hotkey")
-                assertTest(manager.toggleScanHotkey == nil, "GlobalHotkeyManager auto-clears conflicting hotkey")
+                assertTest(manager.toggleScanHotkey == nil, "GlobalHotkeyManager auto-clears conflicting toggleScan hotkey")
+
+                // Assign keyA to oneTimeScan; togglePositioning should be auto-cleared
+                manager.setHotkey(keyA, for: .oneTimeScan)
+                assertTest(manager.oneTimeScanHotkey == keyA, "GlobalHotkeyManager sets oneTimeScan with existing key")
+                assertTest(manager.togglePositioningHotkey == nil, "GlobalHotkeyManager auto-clears conflicting togglePositioning hotkey")
 
                 // Reset hotkeys to nil for clean state
                 manager.setHotkey(nil, for: .toggleScan)
                 manager.setHotkey(nil, for: .togglePositioning)
-                assertTest(manager.toggleScanHotkey == nil && manager.togglePositioningHotkey == nil, "GlobalHotkeyManager clears hotkeys to unassigned")
+                manager.setHotkey(nil, for: .oneTimeScan)
+                assertTest(
+                    manager.toggleScanHotkey == nil && manager.togglePositioningHotkey == nil && manager.oneTimeScanHotkey == nil,
+                    "GlobalHotkeyManager clears hotkeys to unassigned"
+                )
             }
         } catch {
             print("  ❌ [FAIL] Hotkey Testing Error: \(error)")
+            failed += 1
+        }
+
+        // Test 7: GameProfile One-Time Scan Fadeout & Backwards Compatibility
+        do {
+            let profile = GameProfile()
+            assertTest(profile.oneTimeFadeTimeoutSeconds == 5.0, "GameProfile default oneTimeFadeTimeoutSeconds is 5.0")
+
+            // Test decoding profile JSON created prior to oneTimeFadeTimeoutSeconds
+            let legacyProfileJSON = """
+            {
+                "id": "\(UUID().uuidString)",
+                "name": "Legacy Game",
+                "sourceRect": {"x": 100, "y": 150, "width": 600, "height": 120},
+                "displayRect": {"x": 100, "y": 300, "width": 600, "height": 140},
+                "fadeTimeoutSeconds": 4.0
+            }
+            """.data(using: .utf8)!
+            let decodedLegacy = try JSONDecoder().decode(GameProfile.self, from: legacyProfileJSON)
+            assertTest(decodedLegacy.oneTimeFadeTimeoutSeconds == 5.0, "GameProfile decodes legacy profiles with default oneTimeFadeTimeoutSeconds 5.0")
+        } catch {
+            print("  ❌ [FAIL] GameProfile One-Time Timeout Error: \(error)")
             failed += 1
         }
 

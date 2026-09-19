@@ -32,6 +32,10 @@ public final class MenuBarController: NSObject {
             .sink { [weak self] _ in self?.rebuildMenu() }
             .store(in: &cancellables)
 
+        appState.$isOneTimeScanning
+            .sink { [weak self] _ in self?.rebuildMenu() }
+            .store(in: &cancellables)
+
         appState.$isLocked
             .sink { [weak self] _ in self?.rebuildMenu() }
             .store(in: &cancellables)
@@ -69,6 +73,13 @@ public final class MenuBarController: NSObject {
         scanItem.target = self
         menu.addItem(scanItem)
 
+        // One-Time Scan
+        let oneTimeTitle = appState.isOneTimeScanning ? "Scanning..." : "Scan Once"
+        let oneTimeItem = NSMenuItem(title: oneTimeTitle, action: #selector(triggerOneTimeScan), keyEquivalent: "")
+        oneTimeItem.target = self
+        oneTimeItem.isEnabled = !appState.isScanning && !appState.isPositioningOverlays && !appState.isOneTimeScanning
+        menu.addItem(oneTimeItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // Positioning Toggle
@@ -94,6 +105,10 @@ public final class MenuBarController: NSObject {
 
     @objc private func toggleScan() {
         appState.toggleScanning()
+    }
+
+    @objc private func triggerOneTimeScan() {
+        appState.triggerOneTimeScan()
     }
 
     @objc private func toggleLock() {

@@ -178,6 +178,7 @@ public struct SubtitleOverlayView: View {
         .allowsHitTesting(false)
         .onReceive(appState.$lastTranslatedText) { newText in
             guard !newText.isEmpty else { return }
+            guard appState.isScanning else { return }
             opacity = 1.0
             if !appState.isDialoguePresent {
                 resetFadeTimer()
@@ -187,6 +188,7 @@ public struct SubtitleOverlayView: View {
             }
         }
         .onReceive(appState.$isDialoguePresent) { isPresent in
+            guard appState.isScanning else { return }
             if isPresent {
                 fadeTimer?.cancel()
                 fadeTimer = nil
@@ -196,6 +198,11 @@ public struct SubtitleOverlayView: View {
             } else if !appState.lastTranslatedText.isEmpty {
                 resetFadeTimer()
             }
+        }
+        .onReceive(appState.$oneTimeScanTriggerCount) { count in
+            guard count > 0, !appState.isScanning, !appState.isPositioningOverlays else { return }
+            opacity = 1.0
+            resetOneTimeFadeTimer()
         }
     }
 
@@ -238,6 +245,24 @@ public struct SubtitleOverlayView: View {
             .sink { _ in
                 withAnimation(.easeOut(duration: 0.8)) {
                     opacity = 0.0
+                }
+            }
+    }
+
+    private func resetOneTimeFadeTimer() {
+        fadeTimer?.cancel()
+        let timeout = max(0.5, appState.currentProfile.oneTimeFadeTimeoutSeconds)
+        fadeTimer = Just(())
+            .delay(for: .seconds(timeout), scheduler: RunLoop.main)
+            .sink { [weak appState] _ in
+                withAnimation(.easeOut(duration: 0.8)) {
+                    self.opacity = 0.0
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                    guard let appState = appState else { return }
+                    if !appState.isScanning && !appState.isPositioningOverlays {
+                        appState.isOneTimeSubtitleVisible = false
+                    }
                 }
             }
     }

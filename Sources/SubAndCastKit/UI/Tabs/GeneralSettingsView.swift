@@ -79,6 +79,25 @@ public struct GeneralSettingsView: View {
                             if hotkeyManager.togglePositioningHotkey == newKey {
                                 hotkeyManager.togglePositioningHotkey = nil
                             }
+                            if hotkeyManager.oneTimeScanHotkey == newKey {
+                                hotkeyManager.oneTimeScanHotkey = nil
+                            }
+                        }
+                    )
+                }
+
+                HStack {
+                    Text("One-Time Scan")
+                    Spacer()
+                    ShortcutRecorderView(
+                        hotkey: $hotkeyManager.oneTimeScanHotkey,
+                        onSet: { newKey in
+                            if hotkeyManager.toggleScanHotkey == newKey {
+                                hotkeyManager.toggleScanHotkey = nil
+                            }
+                            if hotkeyManager.togglePositioningHotkey == newKey {
+                                hotkeyManager.togglePositioningHotkey = nil
+                            }
                         }
                     )
                 }
@@ -91,6 +110,9 @@ public struct GeneralSettingsView: View {
                         onSet: { newKey in
                             if hotkeyManager.toggleScanHotkey == newKey {
                                 hotkeyManager.toggleScanHotkey = nil
+                            }
+                            if hotkeyManager.oneTimeScanHotkey == newKey {
+                                hotkeyManager.oneTimeScanHotkey = nil
                             }
                         }
                     )

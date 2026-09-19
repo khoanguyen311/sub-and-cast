@@ -5,11 +5,13 @@ import Carbon
 public enum HotkeyAction: UInt32, CaseIterable, Sendable {
     case toggleScan = 1
     case togglePositioning = 2
+    case oneTimeScan = 3
 
     public var displayName: String {
         switch self {
         case .toggleScan: return "Toggle Auto Scan"
         case .togglePositioning: return "Toggle Positioning Mode"
+        case .oneTimeScan: return "One-Time Scan"
         }
     }
 
@@ -17,6 +19,7 @@ public enum HotkeyAction: UInt32, CaseIterable, Sendable {
         switch self {
         case .toggleScan: return "hotkey_toggleScan"
         case .togglePositioning: return "hotkey_togglePositioning"
+        case .oneTimeScan: return "hotkey_oneTimeScan"
         }
     }
 }
@@ -39,6 +42,13 @@ public final class GlobalHotkeyManager: ObservableObject {
         }
     }
 
+    @Published public var oneTimeScanHotkey: AppHotkey? {
+        didSet {
+            saveHotkey(oneTimeScanHotkey, for: .oneTimeScan)
+            updateRegistration(for: .oneTimeScan)
+        }
+    }
+
     private var hotKeyRefs: [HotkeyAction: EventHotKeyRef] = [:]
     private static var isHandlerInstalled = false
     private let hotKeySignature = OSType(0x53414E43) // 'SANC'
@@ -46,10 +56,12 @@ public final class GlobalHotkeyManager: ObservableObject {
     private init() {
         self.toggleScanHotkey = loadHotkey(for: .toggleScan)
         self.togglePositioningHotkey = loadHotkey(for: .togglePositioning)
+        self.oneTimeScanHotkey = loadHotkey(for: .oneTimeScan)
 
         installCarbonHandler()
         updateRegistration(for: .toggleScan)
         updateRegistration(for: .togglePositioning)
+        updateRegistration(for: .oneTimeScan)
     }
 
     /// Sets hotkey for a specified action with automatic duplicate clearing
@@ -60,12 +72,26 @@ public final class GlobalHotkeyManager: ObservableObject {
                 if togglePositioningHotkey == hotkey {
                     togglePositioningHotkey = nil
                 }
+                if oneTimeScanHotkey == hotkey {
+                    oneTimeScanHotkey = nil
+                }
                 toggleScanHotkey = hotkey
             case .togglePositioning:
                 if toggleScanHotkey == hotkey {
                     toggleScanHotkey = nil
                 }
+                if oneTimeScanHotkey == hotkey {
+                    oneTimeScanHotkey = nil
+                }
                 togglePositioningHotkey = hotkey
+            case .oneTimeScan:
+                if toggleScanHotkey == hotkey {
+                    toggleScanHotkey = nil
+                }
+                if togglePositioningHotkey == hotkey {
+                    togglePositioningHotkey = nil
+                }
+                oneTimeScanHotkey = hotkey
             }
         } else {
             switch action {
@@ -73,6 +99,8 @@ public final class GlobalHotkeyManager: ObservableObject {
                 toggleScanHotkey = nil
             case .togglePositioning:
                 togglePositioningHotkey = nil
+            case .oneTimeScan:
+                oneTimeScanHotkey = nil
             }
         }
     }
@@ -81,6 +109,7 @@ public final class GlobalHotkeyManager: ObservableObject {
         switch action {
         case .toggleScan: return toggleScanHotkey
         case .togglePositioning: return togglePositioningHotkey
+        case .oneTimeScan: return oneTimeScanHotkey
         }
     }
 
@@ -156,6 +185,8 @@ public final class GlobalHotkeyManager: ObservableObject {
             AppState.shared.toggleScanning()
         case .togglePositioning:
             AppState.shared.toggleLock()
+        case .oneTimeScan:
+            AppState.shared.triggerOneTimeScan()
         }
     }
 

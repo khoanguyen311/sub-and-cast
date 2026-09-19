@@ -114,7 +114,7 @@ public struct CaptureSettingsView: View {
                     }
                 }
 
-                LabeledContent("Subtitle Fadeout") {
+                LabeledContent("Auto-Scan Fadeout") {
                     HStack(spacing: 12) {
                         Slider(value: $appState.currentProfile.fadeTimeoutSeconds, in: 1.0...10.0, step: 0.5)
                         Text(String(format: "%.1fs", appState.currentProfile.fadeTimeoutSeconds))
@@ -123,10 +123,20 @@ public struct CaptureSettingsView: View {
                             .frame(width: 45, alignment: .trailing)
                     }
                 }
+
+                LabeledContent("One-Time Scan Fadeout") {
+                    HStack(spacing: 12) {
+                        Slider(value: $appState.currentProfile.oneTimeFadeTimeoutSeconds, in: 1.0...15.0, step: 0.5)
+                        Text(String(format: "%.1fs", appState.currentProfile.oneTimeFadeTimeoutSeconds))
+                            .monospacedDigit()
+                            .foregroundColor(.secondary)
+                            .frame(width: 45, alignment: .trailing)
+                    }
+                }
             } header: {
                 Text("Timings")
             } footer: {
-                Text("Subtitles stay visible while dialogue is on screen, then fade out after the set timeout once dialogue leaves.")
+                Text("Auto-scan subtitles fade out after dialogue leaves the screen. One-time scan subtitles fade out automatically after their set duration.")
             }
 
             // MARK: - HUD Appearance

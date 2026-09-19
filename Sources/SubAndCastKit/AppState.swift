@@ -8,6 +8,9 @@ public final class AppState: ObservableObject {
     @Published public var profiles: [GameProfile] = []
     @Published public var currentProfile: GameProfile
     @Published public var isScanning: Bool = false
+    @Published public var isOneTimeScanning: Bool = false
+    @Published public var isOneTimeSubtitleVisible: Bool = false
+    @Published public var oneTimeScanTriggerCount: Int = 0
     @Published public var isLocked: Bool = true // Default to locked
     @Published public var isOverlaysVisible: Bool = false // Hidden on cold launch
     @Published public var isPositioningOverlays: Bool = false // True when user clicked "Position Overlays"
@@ -115,7 +118,78 @@ public final class AppState: ObservableObject {
         scanTask?.cancel()
         scanTask = nil
         isDialoguePresent = false
+        isOneTimeSubtitleVisible = false
         statusMessage = "Scanning paused"
+    }
+
+    public func triggerOneTimeScan() {
+        // Ignore if auto-scan is active, or if currently positioning overlays, or if already scanning
+        guard !isScanning else { return }
+        guard !isPositioningOverlays else { return }
+        guard !isOneTimeScanning else { return }
+
+        let rect = currentProfile.sourceRect.cgRect
+        guard rect.width > 10 && rect.height > 10 else {
+            statusMessage = "Capture area invalid"
+            return
+        }
+
+        isOneTimeScanning = true
+        statusMessage = "Scanning..."
+
+        Task { [weak self] in
+            guard let self = self else { return }
+            defer { self.isOneTimeScanning = false }
+
+            do {
+                let capturedImage = try await self.captureManager.captureRegion(rect: rect)
+                self.isOCRActive = true
+
+                let ocrLangs = self.ocrLanguages(for: self.currentProfile.sourceLanguage)
+                let ocrResult = try await self.ocrManager.recognizeText(in: capturedImage, recognitionLanguages: ocrLangs)
+                self.isOCRActive = false
+
+                let cleanOCR = ocrResult.fullText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                // If no text was recognized in the captured frame:
+                if cleanOCR.isEmpty {
+                    self.statusMessage = "No text detected"
+                    return
+                }
+
+                self.lastRecognizedText = cleanOCR
+                self.statusMessage = "Translating..."
+
+                let translated = try await self.translationCoordinator.translate(
+                    text: cleanOCR,
+                    sourceLanguage: self.currentProfile.sourceLanguage,
+                    targetLanguage: self.currentProfile.targetLanguage,
+                    engineType: self.currentProfile.translationEngineType
+                )
+
+                self.lastTranslatedText = translated
+                self.statusMessage = "Translated (\(self.currentProfile.sourceLanguage.uppercased()) → \(self.currentProfile.targetLanguage.uppercased()))"
+                self.isOneTimeSubtitleVisible = true
+                self.oneTimeScanTriggerCount += 1
+            } catch {
+                self.isOCRActive = false
+                self.statusMessage = "Error: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    public func ocrLanguages(for sourceLanguage: String) -> [String] {
+        switch sourceLanguage.lowercased() {
+        case "ja": return ["ja-JP", "en-US"]
+        case "zh", "zh-hans": return ["zh-Hans", "en-US"]
+        case "zh-hant": return ["zh-Hant", "en-US"]
+        case "ko": return ["ko-KR", "en-US"]
+        case "vi": return ["vi-VN", "en-US"]
+        case "fr": return ["fr-FR", "en-US"]
+        case "de": return ["de-DE", "en-US"]
+        case "es": return ["es-ES", "en-US"]
+        default: return ["en-US"]
+        }
     }
 
     public func testTranslate() {
@@ -145,18 +219,7 @@ public final class AppState: ObservableObject {
             self.isOCRActive = true
 
             // OCR languages based on profile source language
-            var ocrLangs: [String] = []
-            switch currentProfile.sourceLanguage.lowercased() {
-            case "ja": ocrLangs = ["ja-JP", "en-US"]
-            case "zh", "zh-hans": ocrLangs = ["zh-Hans", "en-US"]
-            case "zh-hant": ocrLangs = ["zh-Hant", "en-US"]
-            case "ko": ocrLangs = ["ko-KR", "en-US"]
-            case "vi": ocrLangs = ["vi-VN", "en-US"]
-            case "fr": ocrLangs = ["fr-FR", "en-US"]
-            case "de": ocrLangs = ["de-DE", "en-US"]
-            case "es": ocrLangs = ["es-ES", "en-US"]
-            default: ocrLangs = ["en-US"]
-            }
+            let ocrLangs = ocrLanguages(for: currentProfile.sourceLanguage)
 
             let ocrResult = try await ocrManager.recognizeText(in: capturedImage, recognitionLanguages: ocrLangs)
             self.isOCRActive = false

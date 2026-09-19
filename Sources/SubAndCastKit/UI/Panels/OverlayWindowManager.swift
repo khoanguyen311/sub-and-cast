@@ -76,9 +76,9 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
             .store(in: &cancellables)
 
         // Observe overlay visibility and positioning states
-        Publishers.CombineLatest3(appState.$isOverlaysVisible, appState.$isPositioningOverlays, appState.$isScanning)
+        Publishers.CombineLatest4(appState.$isOverlaysVisible, appState.$isPositioningOverlays, appState.$isScanning, appState.$isOneTimeSubtitleVisible)
             .receive(on: RunLoop.main)
-            .sink { [weak self] isVisible, isPositioning, isScanning in
+            .sink { [weak self] isVisible, isPositioning, isScanning, isOneTimeVisible in
                 guard let self = self else { return }
                 self.updatePanelPositions(from: appState.currentProfile, isPositioning: isPositioning)
                 if isPositioning {
@@ -93,8 +93,8 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
                     self.wasPositioning = false
                     self.stopPositioningKeyMonitoring()
 
-                    if isScanning {
-                        // During active scanning / dialogue display, source box is hidden from screen
+                    if isScanning || isOneTimeVisible {
+                        // During active scanning or one-time scan display, source box is hidden from screen
                         // so it doesn't obstruct the game, while subtitle box is visible
                         self.sourcePanel?.orderOut(nil as Any?)
                         self.subtitlePanel?.orderFrontRegardless()
