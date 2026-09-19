@@ -269,6 +269,38 @@ struct TestRunner {
             ]
             let choiceResult = DialogueTextReconstructor.reconstruct(lines: choiceLines)
             assertTest(choiceResult.count == 3, "DialogueTextReconstructor preserves distinct choice list items on separate lines")
+
+            // Case D: User's 4-choice dialogue where Choice 1 starts with action asterisk and Choice 3 wraps
+            let fourChoiceDialogue = [
+                "Magister Siwan - You'll find him on the other side of this deck, in the officers' quarters.",
+                "*You pull at the thing around your neck, futilely. Demand to know why she collared you.*",
+                "2. [JESTER] *The last thing you remember is hoisting your fifteenth pint. Is this the Ram's Head loo?*",
+                "3. [MYSTIC] *Say you had a long black dream about a ship, sailing the river of the dead. But you're not dead, are",
+                "you?*",
+                "4. *Take your leave.*"
+            ]
+            let fourResult = DialogueTextReconstructor.reconstruct(lines: fourChoiceDialogue)
+            assertTest(fourResult.count == 5, "DialogueTextReconstructor produces exactly 5 lines (speaker + 4 choices)")
+            assertTest(
+                fourResult[0] == "Magister Siwan - You'll find him on the other side of this deck, in the officers' quarters.",
+                "Speaker dialogue line preserved without merging into choices"
+            )
+            assertTest(
+                fourResult[1] == "1. *You pull at the thing around your neck, futilely. Demand to know why she collared you.*",
+                "DialogueTextReconstructor recovered missing '1.' on choice 1 before choice 2"
+            )
+            assertTest(
+                fourResult[2].hasPrefix("2. [JESTER]"),
+                "Choice 2 preserved with '2. [JESTER]'"
+            )
+            assertTest(
+                fourResult[3].contains("you?*"),
+                "Choice 3 wrapped line seamlessly re-merged with choice 3"
+            )
+            assertTest(
+                fourResult[4] == "4. *Take your leave.*",
+                "Choice 4 preserved as '4. *Take your leave.*'"
+            )
         }
 
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")

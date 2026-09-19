@@ -75,10 +75,11 @@ public final class VisionOCRManager: @unchecked Sendable {
                     for (idx, cluster) in lineClusters.enumerated() {
                         let overlap = max(0, min(frag.rect.maxY, cluster.maxY) - max(frag.rect.minY, cluster.minY))
                         let minHeight = min(frag.rect.height, cluster.maxY - cluster.minY)
-                        let midDiff = abs(frag.rect.midY - cluster.midY)
-                        let allowedMidDiff = max(frag.rect.height, cluster.maxY - cluster.minY) * 0.55
+                        let initialHeight = cluster.items.first?.rect.height ?? frag.rect.height
+                        let candidateHeight = max(cluster.maxY, frag.rect.maxY) - min(cluster.minY, frag.rect.minY)
 
-                        if (minHeight > 0 && overlap / minHeight >= 0.35) || midDiff <= allowedMidDiff {
+                        // Must have significant vertical overlap and cannot expand beyond 1.4x the initial line height
+                        if minHeight > 0, overlap / minHeight >= 0.45, candidateHeight <= initialHeight * 1.4 {
                             matchedIndex = idx
                             break
                         }
