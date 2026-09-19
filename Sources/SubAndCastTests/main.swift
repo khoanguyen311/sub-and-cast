@@ -90,6 +90,32 @@ struct TestRunner {
 
             let whiteCheck = differ.hasImageChanged(cgImage: whiteImage)
             assertTest(whiteCheck == true, "ImageDiffer recognizes different frame as changed")
+
+            // Test subtle in-dialogue text change inside a 600x120 dialogue box
+            let w = 600
+            let h = 120
+            func makeDialogueImage(pattern: Int) -> CGImage {
+                var bytes = [UInt8](repeating: 20, count: w * h)
+                for y in 45..<65 {
+                    for x in 50..<350 {
+                        if pattern == 1 {
+                            bytes[y * w + x] = (x % 7 == 0 || y % 4 == 0) ? 230 : 20
+                        } else {
+                            bytes[y * w + x] = (x % 5 == 0 || y % 6 == 0) ? 230 : 20
+                        }
+                    }
+                }
+                let ctx = CGContext(data: &bytes, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w, space: colorSpace, bitmapInfo: CGImageAlphaInfo.none.rawValue)!
+                return ctx.makeImage()!
+            }
+
+            let dialogueDiffer = ImageDiffer()
+            let dImg1 = makeDialogueImage(pattern: 1)
+            let dImg2 = makeDialogueImage(pattern: 2)
+
+            _ = dialogueDiffer.hasImageChanged(cgImage: dImg1)
+            let subtleTextChangeDetected = dialogueDiffer.hasImageChanged(cgImage: dImg2)
+            assertTest(subtleTextChangeDetected == true, "ImageDiffer detects subtle text changes within the same dialogue box")
         }
 
         // Test 3: Google Free Translation Empty Handling

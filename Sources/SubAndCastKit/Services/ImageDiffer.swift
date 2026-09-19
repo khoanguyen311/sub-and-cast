@@ -3,14 +3,14 @@ import Accelerate
 
 public final class ImageDiffer: @unchecked Sendable {
     private var previousBuffer: [UInt8]?
-    private let targetWidth = 32
-    private let targetHeight = 32
+    private let targetWidth = 64
+    private let targetHeight = 64
 
     public init() {}
 
     /// Returns true if the image is considered changed compared to the previous image.
-    /// Threshold is the fraction of total difference (0.0 to 1.0), default 0.03 (3%).
-    public func hasImageChanged(cgImage: CGImage, threshold: Float = 0.03) -> Bool {
+    /// Threshold is the fraction of total difference (0.0 to 1.0), default 0.003 (0.3%).
+    public func hasImageChanged(cgImage: CGImage, threshold: Float = 0.003) -> Bool {
         guard let currentBuffer = extractDownscaledGrayscale(from: cgImage) else {
             return true
         }
@@ -59,7 +59,7 @@ public final class ImageDiffer: @unchecked Sendable {
             return nil
         }
 
-        context.interpolationQuality = .low
+        context.interpolationQuality = .medium
         context.draw(image, in: CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight))
         return buffer
     }
