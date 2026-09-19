@@ -217,9 +217,58 @@ struct TestRunner {
             """.data(using: .utf8)!
             let decodedLegacy = try JSONDecoder().decode(GameProfile.self, from: legacyProfileJSON)
             assertTest(decodedLegacy.oneTimeFadeTimeoutSeconds == 5.0, "GameProfile decodes legacy profiles with default oneTimeFadeTimeoutSeconds 5.0")
+            assertTest(profile.mergeWrappedLines == true, "GameProfile default mergeWrappedLines is true")
+            assertTest(decodedLegacy.mergeWrappedLines == true, "GameProfile decodes legacy profiles with default mergeWrappedLines true")
         } catch {
             print("  ❌ [FAIL] GameProfile One-Time Timeout Error: \(error)")
             failed += 1
+        }
+
+        // Test 8: DialogueTextReconstructor (Smart Line Merging & Choice Reattachment)
+        do {
+            // Case A: User's exact in-game dialogue scenario
+            let rawLines = [
+                "Magister Siwan - A new life awaits! And if you're a particularly good girl, perhaps a cure as well. An end to Source -",
+                "for good!",
+                "1. *You pull at the thing around your neck, futilely. Demand to know why she collared you.*",
+                "2.",
+                "*Take your leave.*"
+            ]
+
+            let reconstructed = DialogueTextReconstructor.reconstruct(lines: rawLines)
+            assertTest(reconstructed.count == 3, "DialogueTextReconstructor produces 3 lines for dialogue and 2 choices")
+            assertTest(
+                reconstructed[0] == "Magister Siwan - A new life awaits! And if you're a particularly good girl, perhaps a cure as well. An end to Source - for good!",
+                "DialogueTextReconstructor merged wrapped sentence preserving sentence dash"
+            )
+            assertTest(
+                reconstructed[1] == "1. *You pull at the thing around your neck, futilely. Demand to know why she collared you.*",
+                "DialogueTextReconstructor preserved choice 1"
+            )
+            assertTest(
+                reconstructed[2] == "2. *Take your leave.*",
+                "DialogueTextReconstructor reattached isolated choice number '2.' to following choice text"
+            )
+
+            // Case B: Word hyphenation break joining
+            let hyphenatedLines = [
+                "This was an unex-",
+                "pected outcome."
+            ]
+            let dehyphenated = DialogueTextReconstructor.reconstruct(lines: hyphenatedLines)
+            assertTest(
+                dehyphenated.first == "This was an unexpected outcome.",
+                "DialogueTextReconstructor seamlessly rejoined broken word hyphenation ('unex-' + 'pected' -> 'unexpected')"
+            )
+
+            // Case C: Choice list preservation
+            let choiceLines = [
+                "What would you like to do?",
+                "1. Attack the guard.",
+                "2. Sneak away silently."
+            ]
+            let choiceResult = DialogueTextReconstructor.reconstruct(lines: choiceLines)
+            assertTest(choiceResult.count == 3, "DialogueTextReconstructor preserves distinct choice list items on separate lines")
         }
 
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")

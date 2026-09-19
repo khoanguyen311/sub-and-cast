@@ -61,6 +61,7 @@ public struct GameProfile: Codable, Identifiable, Equatable {
     public var captureIntervalSeconds: Double
     public var fadeTimeoutSeconds: Double
     public var oneTimeFadeTimeoutSeconds: Double
+    public var mergeWrappedLines: Bool
     public var fontSize: CGFloat
     public var backgroundOpacity: Double
 
@@ -76,6 +77,7 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         captureIntervalSeconds: Double = 0.8,
         fadeTimeoutSeconds: Double = 4.0,
         oneTimeFadeTimeoutSeconds: Double = 5.0,
+        mergeWrappedLines: Bool = true,
         fontSize: CGFloat = 20.0,
         backgroundOpacity: Double = 0.85
     ) {
@@ -90,6 +92,7 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         self.captureIntervalSeconds = captureIntervalSeconds
         self.fadeTimeoutSeconds = fadeTimeoutSeconds
         self.oneTimeFadeTimeoutSeconds = oneTimeFadeTimeoutSeconds
+        self.mergeWrappedLines = mergeWrappedLines
         self.fontSize = fontSize
         self.backgroundOpacity = backgroundOpacity
     }
@@ -107,6 +110,7 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         self.captureIntervalSeconds = try container.decodeIfPresent(Double.self, forKey: .captureIntervalSeconds) ?? 0.8
         self.fadeTimeoutSeconds = try container.decodeIfPresent(Double.self, forKey: .fadeTimeoutSeconds) ?? 4.0
         self.oneTimeFadeTimeoutSeconds = try container.decodeIfPresent(Double.self, forKey: .oneTimeFadeTimeoutSeconds) ?? 5.0
+        self.mergeWrappedLines = try container.decodeIfPresent(Bool.self, forKey: .mergeWrappedLines) ?? true
         self.fontSize = try container.decodeIfPresent(CGFloat.self, forKey: .fontSize) ?? 20.0
         self.backgroundOpacity = try container.decodeIfPresent(Double.self, forKey: .backgroundOpacity) ?? 0.85
     }

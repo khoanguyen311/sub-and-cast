@@ -139,6 +139,15 @@ public struct CaptureSettingsView: View {
                 Text("Auto-scan subtitles fade out after dialogue leaves the screen. One-time scan subtitles fade out automatically after their set duration.")
             }
 
+            // MARK: - Text Processing
+            Section {
+                Toggle("Merge Wrapped Dialogue Lines", isOn: $appState.currentProfile.mergeWrappedLines)
+            } header: {
+                Text("Text Formatting")
+            } footer: {
+                Text("Intelligently merges wrapped dialogue lines into continuous sentences before translating, while keeping choice lists and speaker lines separate.")
+            }
+
             // MARK: - HUD Appearance
             Section {
                 // Live Subtitle Preview Canvas

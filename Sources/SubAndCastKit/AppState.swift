@@ -146,7 +146,11 @@ public final class AppState: ObservableObject {
                 self.isOCRActive = true
 
                 let ocrLangs = self.ocrLanguages(for: self.currentProfile.sourceLanguage)
-                let ocrResult = try await self.ocrManager.recognizeText(in: capturedImage, recognitionLanguages: ocrLangs)
+                let ocrResult = try await self.ocrManager.recognizeText(
+                    in: capturedImage,
+                    recognitionLanguages: ocrLangs,
+                    mergeWrappedLines: self.currentProfile.mergeWrappedLines
+                )
                 self.isOCRActive = false
 
                 let cleanOCR = ocrResult.fullText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -221,7 +225,11 @@ public final class AppState: ObservableObject {
             // OCR languages based on profile source language
             let ocrLangs = ocrLanguages(for: currentProfile.sourceLanguage)
 
-            let ocrResult = try await ocrManager.recognizeText(in: capturedImage, recognitionLanguages: ocrLangs)
+            let ocrResult = try await ocrManager.recognizeText(
+                in: capturedImage,
+                recognitionLanguages: ocrLangs,
+                mergeWrappedLines: currentProfile.mergeWrappedLines
+            )
             self.isOCRActive = false
 
             let cleanOCR = ocrResult.fullText.trimmingCharacters(in: .whitespacesAndNewlines)
