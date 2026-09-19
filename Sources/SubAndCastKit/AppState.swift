@@ -12,6 +12,7 @@ public final class AppState: ObservableObject {
     @Published public var isOverlaysVisible: Bool = false // Hidden on cold launch
     @Published public var isPositioningOverlays: Bool = false // True when user clicked "Position Overlays"
     @Published public var isOCRActive: Bool = false
+    @Published public var isDialoguePresent: Bool = false
     @Published public var lastRecognizedText: String = ""
     @Published public var lastTranslatedText: String = ""
     @Published public var statusMessage: String = "Ready"
@@ -46,7 +47,9 @@ public final class AppState: ObservableObject {
         if !isScanning {
             isOverlaysVisible = false
         }
+        isDialoguePresent = false
         lastTranslatedText = ""
+        lastRecognizedText = ""
         saveCurrentProfile()
         statusMessage = "Overlays Saved & Locked"
         prePositioningSourceRect = nil
@@ -63,7 +66,9 @@ public final class AppState: ObservableObject {
         if !isScanning {
             isOverlaysVisible = false
         }
+        isDialoguePresent = false
         lastTranslatedText = ""
+        lastRecognizedText = ""
         statusMessage = "Positioning Cancelled"
         prePositioningSourceRect = nil
         prePositioningDisplayRect = nil
@@ -109,11 +114,13 @@ public final class AppState: ObservableObject {
         isScanning = false
         scanTask?.cancel()
         scanTask = nil
+        isDialoguePresent = false
         statusMessage = "Scanning paused"
     }
 
     public func testTranslate() {
         isOverlaysVisible = true
+        isDialoguePresent = true
         Task { [weak self] in
             await self?.performScanCycle(force: true)
         }
@@ -128,6 +135,10 @@ public final class AppState: ObservableObject {
 
             // If not forced, check if image actually changed to save OCR/translation power
             if !force && !imageDiffer.hasImageChanged(cgImage: capturedImage) {
+                // Unchanged frame: if dialogue was already recognized, keep it present
+                if !lastRecognizedText.isEmpty {
+                    self.isDialoguePresent = true
+                }
                 return
             }
 
@@ -151,7 +162,18 @@ public final class AppState: ObservableObject {
             self.isOCRActive = false
 
             let cleanOCR = ocrResult.fullText.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !cleanOCR.isEmpty else { return }
+
+            // If no text was recognized in the captured frame:
+            if cleanOCR.isEmpty {
+                if isDialoguePresent {
+                    self.isDialoguePresent = false
+                    self.lastRecognizedText = ""
+                }
+                return
+            }
+
+            // Dialogue text is present
+            self.isDialoguePresent = true
 
             // If text hasn't changed, skip translation
             if cleanOCR == self.lastRecognizedText {

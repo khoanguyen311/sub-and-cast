@@ -125,6 +125,8 @@ public struct CaptureSettingsView: View {
                 }
             } header: {
                 Text("Timings")
+            } footer: {
+                Text("Subtitles stay visible while dialogue is on screen, then fade out after the set timeout once dialogue leaves.")
             }
 
             // MARK: - HUD Appearance

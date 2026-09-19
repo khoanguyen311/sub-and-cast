@@ -179,7 +179,23 @@ public struct SubtitleOverlayView: View {
         .onReceive(appState.$lastTranslatedText) { newText in
             guard !newText.isEmpty else { return }
             opacity = 1.0
-            resetFadeTimer()
+            if !appState.isDialoguePresent {
+                resetFadeTimer()
+            } else {
+                fadeTimer?.cancel()
+                fadeTimer = nil
+            }
+        }
+        .onReceive(appState.$isDialoguePresent) { isPresent in
+            if isPresent {
+                fadeTimer?.cancel()
+                fadeTimer = nil
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    opacity = 1.0
+                }
+            } else if !appState.lastTranslatedText.isEmpty {
+                resetFadeTimer()
+            }
         }
     }
 
@@ -210,7 +226,12 @@ public struct SubtitleOverlayView: View {
     private func resetFadeTimer() {
         fadeTimer?.cancel()
         let timeout = appState.currentProfile.fadeTimeoutSeconds
-        guard timeout > 0 else { return }
+        guard timeout > 0 else {
+            withAnimation(.easeOut(duration: 0.8)) {
+                opacity = 0.0
+            }
+            return
+        }
 
         fadeTimer = Just(())
             .delay(for: .seconds(timeout), scheduler: RunLoop.main)
