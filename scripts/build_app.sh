@@ -28,6 +28,8 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
 <dict>
     <key>CFBundleExecutable</key>
     <string>$APP_NAME</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
     <string>com.khoa.subandcast</string>
     <key>CFBundleName</key>
