@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct GeneralSettingsView: View {
     @ObservedObject var appState: AppState
+    @ObservedObject private var hotkeyManager = GlobalHotkeyManager.shared
     @State private var showingAddPopover: Bool = false
     @State private var showingDeleteAlert: Bool = false
     @State private var newProfileName: String = ""
@@ -65,6 +66,39 @@ public struct GeneralSettingsView: View {
                 }
             } header: {
                 Text("Game Profiles")
+            }
+
+            // MARK: - Global Shortcuts
+            Section {
+                HStack {
+                    Text("Toggle Auto Scan")
+                    Spacer()
+                    ShortcutRecorderView(
+                        hotkey: $hotkeyManager.toggleScanHotkey,
+                        onSet: { newKey in
+                            if hotkeyManager.togglePositioningHotkey == newKey {
+                                hotkeyManager.togglePositioningHotkey = nil
+                            }
+                        }
+                    )
+                }
+
+                HStack {
+                    Text("Calibrate Overlays (Position)")
+                    Spacer()
+                    ShortcutRecorderView(
+                        hotkey: $hotkeyManager.togglePositioningHotkey,
+                        onSet: { newKey in
+                            if hotkeyManager.toggleScanHotkey == newKey {
+                                hotkeyManager.toggleScanHotkey = nil
+                            }
+                        }
+                    )
+                }
+            } header: {
+                Text("Global Shortcuts")
+            } footer: {
+                Text("Hotkeys operate globally inside full-screen games without requiring accessibility permissions.")
             }
         }
         .formStyle(.grouped)

@@ -125,6 +125,42 @@ struct TestRunner {
             failed += 1
         }
 
+        // Test 6: AppHotkey & GlobalHotkeyManager Conflict Resolution
+        do {
+            let hotkey1 = AppHotkey(keyCode: 1, modifiers: 2048 | 256) // Option + Cmd + S
+            assertTest(hotkey1.displayString == "⌥ ⌘ S", "AppHotkey formats modifier and key string accurately")
+
+            let encoded = try JSONEncoder().encode(hotkey1)
+            let decoded = try JSONDecoder().decode(AppHotkey.self, from: encoded)
+            assertTest(decoded == hotkey1, "AppHotkey preserves keyCode and modifiers across Codable")
+
+            // Test Conflict Resolution on MainActor
+            await MainActor.run {
+                let manager = GlobalHotkeyManager.shared
+                let keyA = AppHotkey(keyCode: 1, modifiers: 256) // Cmd + S
+                let keyB = AppHotkey(keyCode: 35, modifiers: 256) // Cmd + P
+
+                manager.setHotkey(keyA, for: .toggleScan)
+                assertTest(manager.toggleScanHotkey == keyA, "GlobalHotkeyManager sets toggleScan hotkey")
+
+                manager.setHotkey(keyB, for: .togglePositioning)
+                assertTest(manager.togglePositioningHotkey == keyB, "GlobalHotkeyManager sets togglePositioning hotkey")
+
+                // Now assign keyA to togglePositioning; toggleScan should be auto-cleared
+                manager.setHotkey(keyA, for: .togglePositioning)
+                assertTest(manager.togglePositioningHotkey == keyA, "GlobalHotkeyManager updates togglePositioning hotkey")
+                assertTest(manager.toggleScanHotkey == nil, "GlobalHotkeyManager auto-clears conflicting hotkey")
+
+                // Reset hotkeys to nil for clean state
+                manager.setHotkey(nil, for: .toggleScan)
+                manager.setHotkey(nil, for: .togglePositioning)
+                assertTest(manager.toggleScanHotkey == nil && manager.togglePositioningHotkey == nil, "GlobalHotkeyManager clears hotkeys to unassigned")
+            }
+        } catch {
+            print("  ❌ [FAIL] Hotkey Testing Error: \(error)")
+            failed += 1
+        }
+
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")
         if failed > 0 {
             exit(1)
