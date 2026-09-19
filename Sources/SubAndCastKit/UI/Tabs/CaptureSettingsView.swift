@@ -225,12 +225,12 @@ struct ZoneCoordinateRow: View {
                     .font(.subheadline.bold())
             }
 
-            HStack(alignment: .center, spacing: 14) {
+            HStack(alignment: .center, spacing: 8) {
                 CoordinateField(label: "X:", value: $rect.x, range: 0...4000)
                 CoordinateField(label: "Y:", value: $rect.y, range: 0...4000)
 
                 Divider()
-                    .frame(height: 16)
+                    .frame(height: 14)
                     .padding(.horizontal, 2)
 
                 CoordinateField(label: "W:", value: $rect.width, range: Int(CodableRect.minWidth)...3000)
@@ -256,23 +256,23 @@ struct CoordinateField: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 4) {
+        HStack(alignment: .center, spacing: 3) {
             Text(label)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize()
 
-            TextField("", value: intBinding, format: .number)
+            TextField("", value: intBinding, format: .number.grouping(.never))
                 .textFieldStyle(.roundedBorder)
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
-                .frame(width: 54, height: 22)
+                .frame(width: 48, height: 20)
 
             Stepper("", value: intBinding, in: range, step: 1)
                 .labelsHidden()
-                .frame(height: 22)
+                .frame(height: 20)
         }
-        .frame(height: 24)
+        .frame(height: 22)
         .fixedSize()
     }
 }
