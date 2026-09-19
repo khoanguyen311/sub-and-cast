@@ -95,7 +95,7 @@ public struct CaptureSettingsView: View {
                             .help("Show draggable overlay boxes on screen")
                         }
                     }
-                    .padding(.top, 4)
+                    .padding(.top, 10)
                 }
                 .padding(.vertical, 4)
             } header: {
