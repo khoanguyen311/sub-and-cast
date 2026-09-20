@@ -38,65 +38,58 @@ public struct CaptureSettingsView: View {
             // MARK: - Zone Positioning & Manual Coordinates
             Section {
                 VStack(alignment: .leading, spacing: 12) {
-                    Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
-                        // 1. OCR Capture Area Title
-                        GridRow {
-                            HStack(spacing: 6) {
-                                Image(systemName: "viewfinder")
-                                    .foregroundColor(.cyan)
-                                    .font(.caption.bold())
-                                Text("OCR Capture Area")
-                                    .font(.subheadline.bold())
-                            }
-                            .gridCellColumns(5)
+                    // 1. OCR Capture Area
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "viewfinder")
+                                .foregroundColor(.cyan)
+                                .font(.caption.bold())
+                            Text("OCR Capture Area")
+                                .font(.subheadline.bold())
                         }
 
-                        // 2. OCR Capture Area Inputs
-                        GridRow(alignment: .center) {
+                        HStack(alignment: .center, spacing: 10) {
                             CoordinateField(label: "X:", value: $appState.currentProfile.sourceRect.x, range: 0...4000)
                             CoordinateField(label: "Y:", value: $appState.currentProfile.sourceRect.y, range: 0...4000)
 
-                            Divider()
-                                .frame(height: 14)
-                                .padding(.horizontal, 2)
+                            Capsule()
+                                .fill(Color.secondary.opacity(0.25))
+                                .frame(width: 1, height: 14)
 
                             CoordinateField(label: "W:", value: $appState.currentProfile.sourceRect.width, range: Int(CodableRect.minWidth)...3000)
                             CoordinateField(label: "H:", value: $appState.currentProfile.sourceRect.height, range: Int(CodableRect.minHeight)...1500)
-                        }
-                        .controlSize(.small)
 
-                        // 3. Clean Hairline Divider
-                        GridRow {
-                            Divider()
-                                .padding(.vertical, 4)
-                                .gridCellColumns(5)
+                            Spacer()
                         }
+                    }
 
-                        // 4. Subtitle Display Area Title
-                        GridRow {
-                            HStack(spacing: 6) {
-                                Image(systemName: "captions.bubble")
-                                    .foregroundColor(.orange)
-                                    .font(.caption.bold())
-                                Text("Subtitle Display Area")
-                                    .font(.subheadline.bold())
-                            }
-                            .gridCellColumns(5)
+                    // 2. Clean Hairline Divider
+                    Divider()
+                        .padding(.vertical, 2)
+
+                    // 3. Subtitle Display Area
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "captions.bubble")
+                                .foregroundColor(.orange)
+                                .font(.caption.bold())
+                            Text("Subtitle Display Area")
+                                .font(.subheadline.bold())
                         }
 
-                        // 5. Subtitle Display Area Inputs
-                        GridRow(alignment: .center) {
+                        HStack(alignment: .center, spacing: 10) {
                             CoordinateField(label: "X:", value: $appState.currentProfile.displayRect.x, range: 0...4000)
                             CoordinateField(label: "Y:", value: $appState.currentProfile.displayRect.y, range: 0...4000)
 
-                            Divider()
-                                .frame(height: 14)
-                                .padding(.horizontal, 2)
+                            Capsule()
+                                .fill(Color.secondary.opacity(0.25))
+                                .frame(width: 1, height: 14)
 
                             CoordinateField(label: "W:", value: $appState.currentProfile.displayRect.width, range: Int(CodableRect.minWidth)...3000)
                             CoordinateField(label: "H:", value: $appState.currentProfile.displayRect.height, range: Int(CodableRect.minHeight)...1500)
+
+                            Spacer()
                         }
-                        .controlSize(.small)
                     }
 
                     // 4. Action Row Aligned to Bottom-Right
@@ -289,11 +282,13 @@ struct CoordinateField: View {
                 .textFieldStyle(.roundedBorder)
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
-                .frame(width: 50)
+                .frame(width: 48)
 
             Stepper("", value: intBinding, in: range, step: 1)
                 .labelsHidden()
         }
+        .controlSize(.small)
+        .frame(width: 92, height: 22, alignment: .leading)
     }
 }
 
