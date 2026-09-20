@@ -126,6 +126,26 @@ public struct GeneralSettingsView: View {
                 Toggle("Show Floating Assistive Button", isOn: $appState.isAssistiveTouchEnabled)
 
                 if appState.isAssistiveTouchEnabled {
+                    LabeledContent("Button Size") {
+                        HStack(spacing: 12) {
+                            Slider(value: $appState.assistiveTouchSize, in: 20...100, step: 2)
+                            Text("\(Int(appState.assistiveTouchSize)) pt")
+                                .monospacedDigit()
+                                .foregroundColor(.secondary)
+                                .frame(width: 48, alignment: .trailing)
+                        }
+                    }
+
+                    LabeledContent("Idle Opacity") {
+                        HStack(spacing: 12) {
+                            Slider(value: $appState.assistiveTouchIdleOpacity, in: 0.0...1.0, step: 0.05)
+                            Text("\(Int(appState.assistiveTouchIdleOpacity * 100))%")
+                                .monospacedDigit()
+                                .foregroundColor(.secondary)
+                                .frame(width: 48, alignment: .trailing)
+                        }
+                    }
+
                     Picker("Single-Click", selection: $appState.assistiveTouchSingleClick) {
                         ForEach(AssistiveTouchAction.allCases) { action in
                             Label(action.rawValue, systemImage: action.iconName).tag(action)
@@ -146,12 +166,6 @@ public struct GeneralSettingsView: View {
                 }
             } header: {
                 Text("Assistive Button")
-            } footer: {
-                if appState.isAssistiveTouchEnabled {
-                    Text("A customizable floating button inspired by iOS AssistiveTouch. Drag to reposition anywhere on screen. Dims automatically when idle.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
             }
         }
         .formStyle(.grouped)

@@ -41,6 +41,16 @@ public final class AppState: ObservableObject {
             UserDefaults.standard.set(assistiveTouchLongPress.rawValue, forKey: "assistive_long_press")
         }
     }
+    @Published public var assistiveTouchSize: CGFloat {
+        didSet {
+            UserDefaults.standard.set(Double(assistiveTouchSize), forKey: "assistive_touch_size")
+        }
+    }
+    @Published public var assistiveTouchIdleOpacity: Double {
+        didSet {
+            UserDefaults.standard.set(assistiveTouchIdleOpacity, forKey: "assistive_touch_idle_opacity")
+        }
+    }
     @Published public var isAssistiveQuickMenuOpen: Bool = false
 
     private var scanTask: Task<Void, Never>?
@@ -79,6 +89,20 @@ public final class AppState: ObservableObject {
             self.assistiveTouchLongPress = action
         } else {
             self.assistiveTouchLongPress = .openQuickMenu
+        }
+
+        if UserDefaults.standard.object(forKey: "assistive_touch_size") != nil {
+            let savedSize = CGFloat(UserDefaults.standard.double(forKey: "assistive_touch_size"))
+            self.assistiveTouchSize = min(max(20, savedSize), 100)
+        } else {
+            self.assistiveTouchSize = 40.0
+        }
+
+        if UserDefaults.standard.object(forKey: "assistive_touch_idle_opacity") != nil {
+            let savedOpacity = UserDefaults.standard.double(forKey: "assistive_touch_idle_opacity")
+            self.assistiveTouchIdleOpacity = min(max(0.0, savedOpacity), 1.0)
+        } else {
+            self.assistiveTouchIdleOpacity = 0.30
         }
     }
 

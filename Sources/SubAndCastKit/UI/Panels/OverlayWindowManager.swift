@@ -66,11 +66,12 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         let savedTouchY = UserDefaults.standard.object(forKey: "assistive_touch_pos_y") != nil
             ? UserDefaults.standard.double(forKey: "assistive_touch_pos_y")
             : (screenRect.minY + 160)
+        let touchDimension = appState.assistiveTouchSize + 12
         let touchOrigin = CGPoint(
-            x: min(max(screenRect.minX + 10, savedTouchX), screenRect.maxX - 74),
-            y: min(max(screenRect.minY + 10, savedTouchY), screenRect.maxY - 74)
+            x: min(max(screenRect.minX + 10, savedTouchX), screenRect.maxX - touchDimension - 10),
+            y: min(max(screenRect.minY + 10, savedTouchY), screenRect.maxY - touchDimension - 10)
         )
-        let touchRect = NSRect(origin: touchOrigin, size: CGSize(width: 64, height: 64))
+        let touchRect = NSRect(origin: touchOrigin, size: CGSize(width: touchDimension, height: touchDimension))
         let atPanel = AssistiveTouchPanel(contentRect: touchRect)
         atPanel.title = "SubAndCast - AssistiveTouch"
         atPanel.contentView = NSHostingView(rootView: AssistiveTouchView(appState: appState))
@@ -88,6 +89,17 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
                     self?.assistiveTouchPanel?.orderFrontRegardless()
                 } else {
                     self?.assistiveTouchPanel?.orderOut(nil)
+                }
+            }
+            .store(in: &cancellables)
+
+        // Observe AssistiveTouch size changes
+        appState.$assistiveTouchSize
+            .receive(on: RunLoop.main)
+            .sink { [weak self, weak appState] _ in
+                guard let self = self, let appState = appState else { return }
+                if !appState.isAssistiveQuickMenuOpen {
+                    self.updateAssistiveTouchSize(isOpen: false)
                 }
             }
             .store(in: &cancellables)
@@ -363,7 +375,8 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         guard let panel = assistiveTouchPanel else { return }
         let currentFrame = panel.frame
         let center = CGPoint(x: currentFrame.midX, y: currentFrame.midY)
-        let targetSize: CGSize = isOpen ? CGSize(width: 230, height: 230) : CGSize(width: 64, height: 64)
+        let closedDimension = AppState.shared.assistiveTouchSize + 12
+        let targetSize: CGSize = isOpen ? CGSize(width: 230, height: 230) : CGSize(width: closedDimension, height: closedDimension)
 
         var newOrigin = CGPoint(
             x: center.x - targetSize.width / 2,

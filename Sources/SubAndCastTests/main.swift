@@ -324,6 +324,8 @@ struct TestRunner {
             await MainActor.run {
                 let state = AppState.shared
                 assertTest(state.isAssistiveTouchEnabled == true, "AssistiveTouch enabled by default")
+                assertTest(state.assistiveTouchSize == 40.0, "Default AssistiveTouch size is 40 pt")
+                assertTest(state.assistiveTouchIdleOpacity == 0.30, "Default AssistiveTouch idle opacity is 30%")
                 assertTest(state.assistiveTouchSingleClick == .oneTimeScan, "Default single-click action is one-time scan")
                 assertTest(state.assistiveTouchDoubleClick == .toggleAutoScan, "Default double-click action is toggle auto-scan")
                 assertTest(state.assistiveTouchLongPress == .openQuickMenu, "Default long-press action is open quick menu")

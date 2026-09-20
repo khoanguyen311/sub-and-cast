@@ -46,43 +46,48 @@ public struct AssistiveTouchView: View {
             singleClickTimer?.cancel()
             longPressTimer?.cancel()
         }
+        .onChange(of: appState.assistiveTouchIdleOpacity) { _, newOpacity in
+            if !isHovering && !isPressed && !appState.isAssistiveQuickMenuOpen {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    opacity = newOpacity
+                }
+            }
+        }
     }
 
     // MARK: - Assistive Touch Button
     private var buttonBody: some View {
-        ZStack {
+        let size = appState.assistiveTouchSize
+        let ringSize = size * 0.62
+        let dotSize = size * 0.38
+        let ringLineWidth = max(1.5, size * 0.048)
+        let borderLineWidth = max(1.0, size * 0.03)
+        let shadowRadius = max(3.0, size * 0.11)
+
+        return ZStack {
             // Dark Frosted Glass Circle
             Circle()
                 .fill(Color.black.opacity(0.68))
                 .overlay(
                     Circle()
-                        .strokeBorder(Color.white.opacity(0.35), lineWidth: 1.5)
+                        .strokeBorder(Color.white.opacity(0.35), lineWidth: borderLineWidth)
                 )
-                .shadow(color: Color.black.opacity(0.45), radius: 6, x: 0, y: 3)
+                .shadow(color: Color.black.opacity(0.45), radius: shadowRadius, x: 0, y: 3)
 
             // Inner AssistiveTouch Rings
             Circle()
-                .stroke(Color.white.opacity(0.55), lineWidth: 2.5)
-                .frame(width: 32, height: 32)
+                .stroke(Color.white.opacity(0.55), lineWidth: ringLineWidth)
+                .frame(width: ringSize, height: ringSize)
 
             Circle()
                 .fill(Color.white.opacity(0.9))
-                .frame(width: 20, height: 20)
-                .shadow(color: Color.white.opacity(0.4), radius: 3)
+                .frame(width: dotSize, height: dotSize)
+                .shadow(color: Color.white.opacity(0.4), radius: shadowRadius * 0.5)
         }
-        .frame(width: 52, height: 52)
+        .frame(width: size, height: size)
         .scaleEffect(isPressed ? 0.92 : (isHovering ? 1.05 : 1.0))
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isPressed)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isHovering)
-        .onHover { hovering in
-            isHovering = hovering
-            if hovering {
-                opacity = 1.0
-                idleTimer?.cancel()
-            } else if !appState.isAssistiveQuickMenuOpen {
-                resetIdleTimer()
-            }
-        }
         .overlay(
             AssistiveTouchGestureDetector(
                 onHoverChanged: { hovering in
@@ -286,7 +291,7 @@ public struct AssistiveTouchView: View {
             try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds idle
             guard !Task.isCancelled, !isHovering, !appState.isAssistiveQuickMenuOpen else { return }
             withAnimation(.easeInOut(duration: 0.6)) {
-                opacity = 0.30 // Auto-dim to 30%
+                opacity = appState.assistiveTouchIdleOpacity
             }
         }
     }

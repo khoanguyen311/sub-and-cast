@@ -271,24 +271,23 @@ struct CoordinateField: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 3) {
+        HStack(alignment: .center, spacing: 4) {
             Text(label)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-                .fixedSize()
+                .frame(width: 18, alignment: .leading)
 
             TextField("", value: intBinding, format: .number.grouping(.never))
                 .textFieldStyle(.roundedBorder)
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
-                .frame(width: 48, height: 20)
+                .frame(width: 50, height: 20)
 
             Stepper("", value: intBinding, in: range, step: 1)
                 .labelsHidden()
                 .frame(height: 20)
         }
-        .frame(height: 22)
-        .fixedSize()
+        .frame(width: 92, height: 22, alignment: .leading)
     }
 }
 
