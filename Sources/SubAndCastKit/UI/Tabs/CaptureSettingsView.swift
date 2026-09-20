@@ -48,13 +48,14 @@ public struct CaptureSettingsView: View {
                                 .font(.subheadline.bold())
                         }
 
-                        HStack(alignment: .center, spacing: 10) {
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
                             CoordinateField(label: "X:", value: $appState.currentProfile.sourceRect.x, range: 0...4000)
                             CoordinateField(label: "Y:", value: $appState.currentProfile.sourceRect.y, range: 0...4000)
 
                             Capsule()
                                 .fill(Color.secondary.opacity(0.25))
                                 .frame(width: 1, height: 14)
+                                .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
 
                             CoordinateField(label: "W:", value: $appState.currentProfile.sourceRect.width, range: Int(CodableRect.minWidth)...3000)
                             CoordinateField(label: "H:", value: $appState.currentProfile.sourceRect.height, range: Int(CodableRect.minHeight)...1500)
@@ -77,13 +78,14 @@ public struct CaptureSettingsView: View {
                                 .font(.subheadline.bold())
                         }
 
-                        HStack(alignment: .center, spacing: 10) {
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
                             CoordinateField(label: "X:", value: $appState.currentProfile.displayRect.x, range: 0...4000)
                             CoordinateField(label: "Y:", value: $appState.currentProfile.displayRect.y, range: 0...4000)
 
                             Capsule()
                                 .fill(Color.secondary.opacity(0.25))
                                 .frame(width: 1, height: 14)
+                                .alignmentGuide(.firstTextBaseline) { d in d[VerticalAlignment.center] }
 
                             CoordinateField(label: "W:", value: $appState.currentProfile.displayRect.width, range: Int(CodableRect.minWidth)...3000)
                             CoordinateField(label: "H:", value: $appState.currentProfile.displayRect.height, range: Int(CodableRect.minHeight)...1500)
@@ -271,7 +273,7 @@ struct CoordinateField: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(label)
                 .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(.secondary)
