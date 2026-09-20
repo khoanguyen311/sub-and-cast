@@ -38,25 +38,66 @@ public struct CaptureSettingsView: View {
             // MARK: - Zone Positioning & Manual Coordinates
             Section {
                 VStack(alignment: .leading, spacing: 12) {
-                    // 1. OCR Capture Area
-                    ZoneCoordinateRow(
-                        title: "OCR Capture Area",
-                        iconName: "viewfinder",
-                        iconColor: .cyan,
-                        rect: $appState.currentProfile.sourceRect
-                    )
+                    Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
+                        // 1. OCR Capture Area Title
+                        GridRow {
+                            HStack(spacing: 6) {
+                                Image(systemName: "viewfinder")
+                                    .foregroundColor(.cyan)
+                                    .font(.caption.bold())
+                                Text("OCR Capture Area")
+                                    .font(.subheadline.bold())
+                            }
+                            .gridCellColumns(5)
+                        }
 
-                    // 2. Clean Hairline Divider
-                    Divider()
-                        .padding(.vertical, 2)
+                        // 2. OCR Capture Area Inputs
+                        GridRow(alignment: .center) {
+                            CoordinateField(label: "X:", value: $appState.currentProfile.sourceRect.x, range: 0...4000)
+                            CoordinateField(label: "Y:", value: $appState.currentProfile.sourceRect.y, range: 0...4000)
 
-                    // 3. Subtitle Display Area
-                    ZoneCoordinateRow(
-                        title: "Subtitle Display Area",
-                        iconName: "captions.bubble",
-                        iconColor: .orange,
-                        rect: $appState.currentProfile.displayRect
-                    )
+                            Divider()
+                                .frame(height: 14)
+                                .padding(.horizontal, 2)
+
+                            CoordinateField(label: "W:", value: $appState.currentProfile.sourceRect.width, range: Int(CodableRect.minWidth)...3000)
+                            CoordinateField(label: "H:", value: $appState.currentProfile.sourceRect.height, range: Int(CodableRect.minHeight)...1500)
+                        }
+                        .controlSize(.small)
+
+                        // 3. Clean Hairline Divider
+                        GridRow {
+                            Divider()
+                                .padding(.vertical, 4)
+                                .gridCellColumns(5)
+                        }
+
+                        // 4. Subtitle Display Area Title
+                        GridRow {
+                            HStack(spacing: 6) {
+                                Image(systemName: "captions.bubble")
+                                    .foregroundColor(.orange)
+                                    .font(.caption.bold())
+                                Text("Subtitle Display Area")
+                                    .font(.subheadline.bold())
+                            }
+                            .gridCellColumns(5)
+                        }
+
+                        // 5. Subtitle Display Area Inputs
+                        GridRow(alignment: .center) {
+                            CoordinateField(label: "X:", value: $appState.currentProfile.displayRect.x, range: 0...4000)
+                            CoordinateField(label: "Y:", value: $appState.currentProfile.displayRect.y, range: 0...4000)
+
+                            Divider()
+                                .frame(height: 14)
+                                .padding(.horizontal, 2)
+
+                            CoordinateField(label: "W:", value: $appState.currentProfile.displayRect.width, range: Int(CodableRect.minWidth)...3000)
+                            CoordinateField(label: "H:", value: $appState.currentProfile.displayRect.height, range: Int(CodableRect.minHeight)...1500)
+                        }
+                        .controlSize(.small)
+                    }
 
                     // 4. Action Row Aligned to Bottom-Right
                     HStack(spacing: 8) {
@@ -223,41 +264,7 @@ public struct CaptureSettingsView: View {
     }
 }
 
-// MARK: - Coordinate Row & Inputs
-struct ZoneCoordinateRow: View {
-    let title: String
-    let iconName: String
-    let iconColor: Color
-    @Binding var rect: CodableRect
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: iconName)
-                    .foregroundColor(iconColor)
-                    .font(.caption.bold())
-                Text(title)
-                    .font(.subheadline.bold())
-            }
-
-            HStack(alignment: .center, spacing: 8) {
-                CoordinateField(label: "X:", value: $rect.x, range: 0...4000)
-                CoordinateField(label: "Y:", value: $rect.y, range: 0...4000)
-
-                Divider()
-                    .frame(height: 14)
-                    .padding(.horizontal, 2)
-
-                CoordinateField(label: "W:", value: $rect.width, range: Int(CodableRect.minWidth)...3000)
-                CoordinateField(label: "H:", value: $rect.height, range: Int(CodableRect.minHeight)...1500)
-
-                Spacer()
-            }
-            .controlSize(.small)
-        }
-    }
-}
-
+// MARK: - Coordinate Input Field
 struct CoordinateField: View {
     let label: String
     @Binding var value: CGFloat
@@ -275,7 +282,8 @@ struct CoordinateField: View {
             Text(label)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-                .frame(width: 18, alignment: .leading)
+                .lineLimit(1)
+                .frame(width: 22, alignment: .leading)
 
             TextField("", value: intBinding, format: .number.grouping(.never))
                 .textFieldStyle(.roundedBorder)
@@ -287,7 +295,6 @@ struct CoordinateField: View {
                 .labelsHidden()
                 .frame(height: 20)
         }
-        .frame(width: 92, height: 22, alignment: .leading)
     }
 }
 
