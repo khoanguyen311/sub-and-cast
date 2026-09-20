@@ -8,6 +8,7 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
 
     private var sourcePanel: FloatingOverlayPanel?
     private var subtitlePanel: FloatingOverlayPanel?
+    private var assistiveTouchPanel: AssistiveTouchPanel?
     private var settingsWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
     private var wasPositioning = false
@@ -57,6 +58,47 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         // Start ordered out (hidden on launch)
         subPanel.orderOut(nil as Any?)
         self.subtitlePanel = subPanel
+
+        // 3. AssistiveTouch Floating Button Panel
+        let savedTouchX = UserDefaults.standard.object(forKey: "assistive_touch_pos_x") != nil
+            ? UserDefaults.standard.double(forKey: "assistive_touch_pos_x")
+            : (screenRect.maxX - 90)
+        let savedTouchY = UserDefaults.standard.object(forKey: "assistive_touch_pos_y") != nil
+            ? UserDefaults.standard.double(forKey: "assistive_touch_pos_y")
+            : (screenRect.minY + 160)
+        let touchOrigin = CGPoint(
+            x: min(max(screenRect.minX + 10, savedTouchX), screenRect.maxX - 74),
+            y: min(max(screenRect.minY + 10, savedTouchY), screenRect.maxY - 74)
+        )
+        let touchRect = NSRect(origin: touchOrigin, size: CGSize(width: 64, height: 64))
+        let atPanel = AssistiveTouchPanel(contentRect: touchRect)
+        atPanel.title = "SubAndCast - AssistiveTouch"
+        atPanel.contentView = NSHostingView(rootView: AssistiveTouchView(appState: appState))
+        self.assistiveTouchPanel = atPanel
+
+        if appState.isAssistiveTouchEnabled {
+            atPanel.orderFrontRegardless()
+        }
+
+        // Observe AssistiveTouch enabled state
+        appState.$isAssistiveTouchEnabled
+            .receive(on: RunLoop.main)
+            .sink { [weak self] enabled in
+                if enabled {
+                    self?.assistiveTouchPanel?.orderFrontRegardless()
+                } else {
+                    self?.assistiveTouchPanel?.orderOut(nil)
+                }
+            }
+            .store(in: &cancellables)
+
+        // Observe AssistiveTouch quick menu open/close for sizing
+        appState.$isAssistiveQuickMenuOpen
+            .receive(on: RunLoop.main)
+            .sink { [weak self] isOpen in
+                self?.updateAssistiveTouchSize(isOpen: isOpen)
+            }
+            .store(in: &cancellables)
 
         // Observe lock status
         appState.$isLocked
@@ -313,6 +355,53 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
                 height: boxHeight
             )
             appState.updateDisplayRectLive(cgRect)
+        }
+    }
+
+    // MARK: - AssistiveTouch Window Management
+    private func updateAssistiveTouchSize(isOpen: Bool) {
+        guard let panel = assistiveTouchPanel else { return }
+        let currentFrame = panel.frame
+        let center = CGPoint(x: currentFrame.midX, y: currentFrame.midY)
+        let targetSize: CGSize = isOpen ? CGSize(width: 230, height: 230) : CGSize(width: 64, height: 64)
+
+        var newOrigin = CGPoint(
+            x: center.x - targetSize.width / 2,
+            y: center.y - targetSize.height / 2
+        )
+
+        if let screen = panel.screen ?? NSScreen.main {
+            let visible = screen.visibleFrame
+            newOrigin.x = max(visible.minX + 8, min(newOrigin.x, visible.maxX - targetSize.width - 8))
+            newOrigin.y = max(visible.minY + 8, min(newOrigin.y, visible.maxY - targetSize.height - 8))
+        }
+
+        let newFrame = NSRect(origin: newOrigin, size: targetSize)
+        panel.setFrame(newFrame, display: true, animate: false)
+
+        if !isOpen {
+            UserDefaults.standard.set(newFrame.origin.x, forKey: "assistive_touch_pos_x")
+            UserDefaults.standard.set(newFrame.origin.y, forKey: "assistive_touch_pos_y")
+        }
+    }
+
+    public func moveAssistiveTouch(deltaX: CGFloat, deltaY: CGFloat) {
+        guard let panel = assistiveTouchPanel else { return }
+        var frame = panel.frame
+        frame.origin.x += deltaX
+        frame.origin.y += deltaY
+
+        if let screen = panel.screen ?? NSScreen.main {
+            let visible = screen.visibleFrame
+            frame.origin.x = max(visible.minX, min(frame.origin.x, visible.maxX - frame.width))
+            frame.origin.y = max(visible.minY, min(frame.origin.y, visible.maxY - frame.height))
+        }
+
+        panel.setFrame(frame, display: true)
+
+        if !AppState.shared.isAssistiveQuickMenuOpen {
+            UserDefaults.standard.set(frame.origin.x, forKey: "assistive_touch_pos_x")
+            UserDefaults.standard.set(frame.origin.y, forKey: "assistive_touch_pos_y")
         }
     }
 }

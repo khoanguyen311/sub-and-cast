@@ -120,6 +120,39 @@ public struct GeneralSettingsView: View {
             } header: {
                 Text("Global Shortcuts")
             }
+
+            // MARK: - Assistive Button
+            Section {
+                Toggle("Show Floating Assistive Button", isOn: $appState.isAssistiveTouchEnabled)
+
+                if appState.isAssistiveTouchEnabled {
+                    Picker("Single-Click", selection: $appState.assistiveTouchSingleClick) {
+                        ForEach(AssistiveTouchAction.allCases) { action in
+                            Label(action.rawValue, systemImage: action.iconName).tag(action)
+                        }
+                    }
+
+                    Picker("Double-Click", selection: $appState.assistiveTouchDoubleClick) {
+                        ForEach(AssistiveTouchAction.allCases) { action in
+                            Label(action.rawValue, systemImage: action.iconName).tag(action)
+                        }
+                    }
+
+                    Picker("Long-Press", selection: $appState.assistiveTouchLongPress) {
+                        ForEach(AssistiveTouchAction.allCases) { action in
+                            Label(action.rawValue, systemImage: action.iconName).tag(action)
+                        }
+                    }
+                }
+            } header: {
+                Text("Assistive Button")
+            } footer: {
+                if appState.isAssistiveTouchEnabled {
+                    Text("A customizable floating button inspired by iOS AssistiveTouch. Drag to reposition anywhere on screen. Dims automatically when idle.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
         }
         .formStyle(.grouped)
     }

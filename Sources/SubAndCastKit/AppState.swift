@@ -20,6 +20,29 @@ public final class AppState: ObservableObject {
     @Published public var lastTranslatedText: String = ""
     @Published public var statusMessage: String = "Ready"
 
+    // MARK: - AssistiveTouch Settings & State
+    @Published public var isAssistiveTouchEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isAssistiveTouchEnabled, forKey: "assistive_touch_enabled")
+        }
+    }
+    @Published public var assistiveTouchSingleClick: AssistiveTouchAction {
+        didSet {
+            UserDefaults.standard.set(assistiveTouchSingleClick.rawValue, forKey: "assistive_single_click")
+        }
+    }
+    @Published public var assistiveTouchDoubleClick: AssistiveTouchAction {
+        didSet {
+            UserDefaults.standard.set(assistiveTouchDoubleClick.rawValue, forKey: "assistive_double_click")
+        }
+    }
+    @Published public var assistiveTouchLongPress: AssistiveTouchAction {
+        didSet {
+            UserDefaults.standard.set(assistiveTouchLongPress.rawValue, forKey: "assistive_long_press")
+        }
+    }
+    @Published public var isAssistiveQuickMenuOpen: Bool = false
+
     private var scanTask: Task<Void, Never>?
     private let captureManager = ScreenCaptureManager()
     private let imageDiffer = ImageDiffer()
@@ -30,6 +53,50 @@ public final class AppState: ObservableObject {
         let loadedProfiles = ProfileManager.shared.loadProfiles()
         self.profiles = loadedProfiles
         self.currentProfile = loadedProfiles.first ?? GameProfile()
+
+        if UserDefaults.standard.object(forKey: "assistive_touch_enabled") != nil {
+            self.isAssistiveTouchEnabled = UserDefaults.standard.bool(forKey: "assistive_touch_enabled")
+        } else {
+            self.isAssistiveTouchEnabled = true
+        }
+
+        if let raw = UserDefaults.standard.string(forKey: "assistive_single_click"),
+           let action = AssistiveTouchAction(rawValue: raw) {
+            self.assistiveTouchSingleClick = action
+        } else {
+            self.assistiveTouchSingleClick = .oneTimeScan
+        }
+
+        if let raw = UserDefaults.standard.string(forKey: "assistive_double_click"),
+           let action = AssistiveTouchAction(rawValue: raw) {
+            self.assistiveTouchDoubleClick = action
+        } else {
+            self.assistiveTouchDoubleClick = .toggleAutoScan
+        }
+
+        if let raw = UserDefaults.standard.string(forKey: "assistive_long_press"),
+           let action = AssistiveTouchAction(rawValue: raw) {
+            self.assistiveTouchLongPress = action
+        } else {
+            self.assistiveTouchLongPress = .openQuickMenu
+        }
+    }
+
+    public func executeAssistiveAction(_ action: AssistiveTouchAction) {
+        switch action {
+        case .oneTimeScan:
+            triggerOneTimeScan()
+        case .toggleAutoScan:
+            toggleScanning()
+        case .togglePositioning:
+            toggleLock()
+        case .openQuickMenu:
+            isAssistiveQuickMenuOpen.toggle()
+        case .openPreferences:
+            OverlayWindowManager.shared.showSettings(appState: self)
+        case .none:
+            break
+        }
     }
 
     private var prePositioningSourceRect: CodableRect?

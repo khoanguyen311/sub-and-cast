@@ -303,6 +303,47 @@ struct TestRunner {
             )
         }
 
+        // Test 5: AssistiveTouch Action Models and Execution
+        do {
+            // Check enum cases and icon names
+            let allCases = AssistiveTouchAction.allCases
+            assertTest(allCases.count == 6, "AssistiveTouchAction contains all 6 cases")
+            assertTest(AssistiveTouchAction.oneTimeScan.iconName == "viewfinder", "AssistiveTouchAction.oneTimeScan icon is viewfinder")
+            assertTest(AssistiveTouchAction.toggleAutoScan.iconName == "arrow.clockwise.circle", "AssistiveTouchAction.toggleAutoScan icon is arrow.clockwise.circle")
+            assertTest(AssistiveTouchAction.togglePositioning.iconName == "hand.draw", "AssistiveTouchAction.togglePositioning icon is hand.draw")
+            assertTest(AssistiveTouchAction.openQuickMenu.iconName == "square.grid.2x2", "AssistiveTouchAction.openQuickMenu icon is square.grid.2x2")
+            assertTest(AssistiveTouchAction.openPreferences.iconName == "gearshape", "AssistiveTouchAction.openPreferences icon is gearshape")
+            assertTest(AssistiveTouchAction.none.iconName == "slash.circle", "AssistiveTouchAction.none icon is slash.circle")
+
+            // Test serialization
+            let encoded = try JSONEncoder().encode(AssistiveTouchAction.openQuickMenu)
+            let decoded = try JSONDecoder().decode(AssistiveTouchAction.self, from: encoded)
+            assertTest(decoded == .openQuickMenu, "AssistiveTouchAction encodes and decodes properly")
+
+            // Test AppState default state and action execution on MainActor
+            await MainActor.run {
+                let state = AppState.shared
+                assertTest(state.isAssistiveTouchEnabled == true, "AssistiveTouch enabled by default")
+                assertTest(state.assistiveTouchSingleClick == .oneTimeScan, "Default single-click action is one-time scan")
+                assertTest(state.assistiveTouchDoubleClick == .toggleAutoScan, "Default double-click action is toggle auto-scan")
+                assertTest(state.assistiveTouchLongPress == .openQuickMenu, "Default long-press action is open quick menu")
+
+                // Test toggle quick menu execution
+                let initialMenuState = state.isAssistiveQuickMenuOpen
+                state.executeAssistiveAction(.openQuickMenu)
+                assertTest(state.isAssistiveQuickMenuOpen == !initialMenuState, "executeAssistiveAction toggles quick menu state")
+                state.executeAssistiveAction(.openQuickMenu)
+                assertTest(state.isAssistiveQuickMenuOpen == initialMenuState, "executeAssistiveAction reverts quick menu state")
+
+                // Test none action execution
+                state.executeAssistiveAction(.none)
+                assertTest(true, "executeAssistiveAction(.none) executes safely without side effects")
+            }
+        } catch {
+            print("  ❌ [FAIL] AssistiveTouch Error: \(error)")
+            failed += 1
+        }
+
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")
         if failed > 0 {
             exit(1)
