@@ -280,20 +280,19 @@ struct CoordinateField: View {
     var body: some View {
         HStack(alignment: .center, spacing: 4) {
             Text(label)
-                .font(.subheadline)
+                .font(.system(size: 11, weight: .regular))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-                .frame(width: 22, alignment: .leading)
+                .frame(width: 16, alignment: .leading)
 
             TextField("", value: intBinding, format: .number.grouping(.never))
                 .textFieldStyle(.roundedBorder)
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
-                .frame(width: 50, height: 20)
+                .frame(width: 50)
 
             Stepper("", value: intBinding, in: range, step: 1)
                 .labelsHidden()
-                .frame(height: 20)
         }
     }
 }
