@@ -288,7 +288,7 @@ struct CoordinateField: View {
                 .labelsHidden()
         }
         .controlSize(.small)
-        .frame(width: 92, height: 22)
+        .frame(width: 92, height: 22, alignment: .leading)
     }
 }
 

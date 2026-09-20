@@ -123,7 +123,7 @@ public struct GeneralSettingsView: View {
 
             // MARK: - Assistive Button
             Section {
-                Toggle("Show Floating Assistive Button", isOn: $appState.isAssistiveTouchEnabled)
+                Toggle("Enabled", isOn: $appState.isAssistiveTouchEnabled)
 
                 if appState.isAssistiveTouchEnabled {
                     LabeledContent("Button Size") {
