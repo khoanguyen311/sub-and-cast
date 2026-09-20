@@ -282,13 +282,15 @@ struct CoordinateField: View {
                 .textFieldStyle(.roundedBorder)
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
-                .frame(width: 48)
+                .frame(width: 48, height: 19)
 
             Stepper("", value: intBinding, in: range, step: 1)
                 .labelsHidden()
+                .fixedSize()
         }
         .controlSize(.small)
-        .frame(width: 92, height: 22, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(width: 92, alignment: .leading)
     }
 }
 
