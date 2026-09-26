@@ -675,6 +675,61 @@ struct TestRunner {
             failed += 1
         }
 
+        // Test 13: ProfileStore Headless Tests (In-Memory Adapter)
+        do {
+            let inMemoryAdapter = InMemoryProfileStorageAdapter(initialProfiles: [])
+            let store = await MainActor.run {
+                ProfileStore(storage: inMemoryAdapter, debounceNanoseconds: 50_000_000)
+            }
+
+            await MainActor.run {
+                assertTest(store.profiles.count == 1, "ProfileStore creates default profile when storage is empty")
+                assertTest(store.activeProfile.name == "Default Game", "ProfileStore default profile named 'Default Game'")
+
+                // Add profile with sub-minimum dimensions to verify automatic healing
+                let p2 = store.addProfile(name: "Baldur's Gate 3")
+                assertTest(store.profiles.count == 2, "ProfileStore addProfile increments count")
+                assertTest(store.activeProfile.id == p2.id, "ProfileStore addProfile makes new profile active")
+
+                store.updateActiveProfile { profile in
+                    profile.sourceRect = CodableRect(x: -10, y: -20, width: 50, height: 10)
+                }
+                assertTest(store.activeProfile.sourceRect.width >= CodableRect.minWidth, "ProfileStore heals sub-minimum width to minWidth")
+                assertTest(store.activeProfile.sourceRect.height >= CodableRect.minHeight, "ProfileStore heals sub-minimum height to minHeight")
+
+                // Add third profile and test selection
+                let p3 = store.addProfile(name: "Elden Ring")
+                assertTest(store.activeProfile.id == p3.id, "ProfileStore activeProfile matches Elden Ring")
+                store.selectProfile(id: p2.id)
+                assertTest(store.activeProfile.id == p2.id, "ProfileStore selectProfile selects Baldur's Gate 3")
+
+                // Test deletion of active profile shifts selection to first remaining
+                store.deleteProfile(id: p2.id)
+                assertTest(store.profiles.count == 2, "ProfileStore deleteProfile removes target")
+                assertTest(store.activeProfile.id == store.profiles.first?.id, "ProfileStore deleting active shifts to first remaining profile")
+
+                // Delete until only 1 remains
+                store.deleteProfile(id: p3.id)
+                assertTest(store.profiles.count == 1, "ProfileStore retains exactly 1 profile")
+
+                // Attempt deleting the only remaining profile
+                store.deleteProfile(id: store.profiles[0].id)
+                assertTest(store.profiles.count == 1, "ProfileStore ignores deleting the last remaining profile")
+
+                // Flush persists to adapter
+                store.flush()
+                assertTest(inMemoryAdapter.saveCount >= 1, "ProfileStore flush persists to storage adapter")
+
+                // AppState integration with injected ProfileStore
+                let appStateWithStore = AppState(profileStore: store)
+                assertTest(appStateWithStore.profiles.count == 1, "AppState adopts injected ProfileStore profiles")
+                assertTest(appStateWithStore.currentProfile.id == store.activeProfile.id, "AppState adopts injected ProfileStore active profile")
+            }
+        } catch {
+            print("  ❌ [FAIL] ProfileStore Tests Error: \(error)")
+            failed += 1
+        }
+
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")
         if failed > 0 {
             exit(1)

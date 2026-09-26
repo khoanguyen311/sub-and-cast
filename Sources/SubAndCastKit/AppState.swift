@@ -53,15 +53,17 @@ public final class AppState: ObservableObject {
     }
     @Published public var isAssistiveQuickMenuOpen: Bool = false
 
+    public var profileStore: ProfileStore
     public var subtitlePipeline: SubtitlePipelineProtocol
 
     private var scanTask: Task<Void, Never>?
 
-    public init(subtitlePipeline: SubtitlePipelineProtocol? = nil) {
+    public init(subtitlePipeline: SubtitlePipelineProtocol? = nil, profileStore: ProfileStore? = nil) {
         self.subtitlePipeline = subtitlePipeline ?? SubtitlePipeline()
-        let loadedProfiles = ProfileManager.shared.loadProfiles()
-        self.profiles = loadedProfiles
-        self.currentProfile = loadedProfiles.first ?? GameProfile()
+        let store = profileStore ?? ProfileStore.shared
+        self.profileStore = store
+        self.profiles = store.profiles
+        self.currentProfile = store.activeProfile
 
         if UserDefaults.standard.object(forKey: "assistive_touch_enabled") != nil {
             self.isAssistiveTouchEnabled = UserDefaults.standard.bool(forKey: "assistive_touch_enabled")
@@ -316,39 +318,37 @@ public final class AppState: ObservableObject {
         }
     }
 
-    private var debouncedSaveTask: Task<Void, Never>?
-
     public func scheduleSaveCurrentProfile() {
-        debouncedSaveTask?.cancel()
-        debouncedSaveTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
-            guard !Task.isCancelled, let self = self else { return }
-            self.saveCurrentProfile()
+        profileStore.updateActiveProfile { [weak self] profile in
+            guard let self = self else { return }
+            profile = self.currentProfile
         }
     }
 
     public func updateSourceRectLive(_ rect: CGRect) {
         guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
         currentProfile.sourceRect = CodableRect(cgRect: rect)
-        scheduleSaveCurrentProfile()
+        profileStore.updateActiveProfile { $0.sourceRect = CodableRect(cgRect: rect) }
     }
 
     public func updateDisplayRectLive(_ rect: CGRect) {
         guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
         currentProfile.displayRect = CodableRect(cgRect: rect)
-        scheduleSaveCurrentProfile()
+        profileStore.updateActiveProfile { $0.displayRect = CodableRect(cgRect: rect) }
     }
 
     public func updateSourceRect(_ rect: CGRect) {
         guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
         currentProfile.sourceRect = CodableRect(cgRect: rect)
-        saveCurrentProfile()
+        profileStore.updateActiveProfile { $0.sourceRect = CodableRect(cgRect: rect) }
+        profileStore.flush()
     }
 
     public func updateDisplayRect(_ rect: CGRect) {
         guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
         currentProfile.displayRect = CodableRect(cgRect: rect)
-        saveCurrentProfile()
+        profileStore.updateActiveProfile { $0.displayRect = CodableRect(cgRect: rect) }
+        profileStore.flush()
     }
 
     public func resetOverlayZonesToDefault() {
@@ -362,40 +362,46 @@ public final class AppState: ObservableObject {
         // Subtitle output zone near bottom
         let displayY = max(captureY + captureHeight + 10, min(screen.height - subtitleHeight - 20, screen.height * 0.78))
 
-        currentProfile.sourceRect = CodableRect(x: centerX, y: captureY, width: width, height: captureHeight)
-        currentProfile.displayRect = CodableRect(x: centerX, y: displayY, width: width, height: subtitleHeight)
-        saveCurrentProfile()
+        let src = CodableRect(x: centerX, y: captureY, width: width, height: captureHeight)
+        let dst = CodableRect(x: centerX, y: displayY, width: width, height: subtitleHeight)
+
+        currentProfile.sourceRect = src
+        currentProfile.displayRect = dst
+
+        profileStore.updateActiveProfile {
+            $0.sourceRect = src
+            $0.displayRect = dst
+        }
+        profileStore.flush()
         OverlayWindowManager.shared.updatePanelPositions(from: currentProfile)
         statusMessage = "Overlays Reset to Default"
     }
 
     public func selectProfile(_ profile: GameProfile) {
-        self.currentProfile = profile
-        saveCurrentProfile()
+        profileStore.selectProfile(id: profile.id)
+        self.currentProfile = profileStore.activeProfile
+        self.profiles = profileStore.profiles
     }
 
     public func saveCurrentProfile() {
-        if let idx = profiles.firstIndex(where: { $0.id == currentProfile.id }) {
-            profiles[idx] = currentProfile
-        } else {
-            profiles.append(currentProfile)
+        profileStore.updateActiveProfile { [weak self] p in
+            guard let self = self else { return }
+            p = self.currentProfile
         }
-        ProfileManager.shared.saveProfiles(profiles)
+        profileStore.flush()
+        self.profiles = profileStore.profiles
+        self.currentProfile = profileStore.activeProfile
     }
 
     public func addNewProfile(name: String) {
-        let newProfile = GameProfile(name: name)
-        profiles.append(newProfile)
-        currentProfile = newProfile
-        ProfileManager.shared.saveProfiles(profiles)
+        let newProfile = profileStore.addProfile(name: name)
+        self.profiles = profileStore.profiles
+        self.currentProfile = newProfile
     }
 
     public func deleteProfile(id: UUID) {
-        guard profiles.count > 1 else { return }
-        profiles.removeAll(where: { $0.id == id })
-        if currentProfile.id == id {
-            currentProfile = profiles.first ?? GameProfile()
-        }
-        ProfileManager.shared.saveProfiles(profiles)
+        profileStore.deleteProfile(id: id)
+        self.profiles = profileStore.profiles
+        self.currentProfile = profileStore.activeProfile
     }
 }
