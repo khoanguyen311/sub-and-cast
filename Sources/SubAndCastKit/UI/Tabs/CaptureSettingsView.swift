@@ -280,6 +280,7 @@ struct CoordinateField: View {
 
             TextField("", value: intBinding, format: .number.grouping(.never))
                 .textFieldStyle(.roundedBorder)
+                .labelsHidden()
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
                 .frame(width: 48)
@@ -287,8 +288,6 @@ struct CoordinateField: View {
             Stepper("", value: intBinding, in: range, step: 1)
                 .labelsHidden()
         }
-        .controlSize(.small)
-        .frame(width: 92, height: 22, alignment: .leading)
     }
 }
 

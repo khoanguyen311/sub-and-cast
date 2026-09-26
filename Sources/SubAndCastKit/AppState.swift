@@ -21,6 +21,8 @@ public final class AppState: ObservableObject {
     @Published public var lastRecognizedText: String = ""
     @Published public var lastTranslatedText: String = ""
     @Published public var statusMessage: String = "Ready"
+    @Published public var hudWarning: String? = nil
+    private var hudWarningTimer: AnyCancellable?
 
     // MARK: - AssistiveTouch Settings
     @Published public var isAssistiveTouchEnabled: Bool {
@@ -93,6 +95,25 @@ public final class AppState: ObservableObject {
                 }
             }
         }
+
+        TranslationCoordinator.shared.onFallbackTriggered = { [weak self] targetEngine, _ in
+            Task { @MainActor [weak self] in
+                let engineName = (targetEngine == "apple") ? "Apple Native" : "Google Translate"
+                self?.showHUDWarning("⚠️ Fallback: \(engineName)")
+            }
+        }
+    }
+
+    public func showHUDWarning(_ message: String, duration: Double = 3.0) {
+        hudWarningTimer?.cancel()
+        hudWarning = message
+        hudWarningTimer = Just(())
+            .delay(for: .seconds(duration), scheduler: RunLoop.main)
+            .sink { [weak self] _ in
+                withAnimation(.easeOut(duration: 0.5)) {
+                    self?.hudWarning = nil
+                }
+            }
     }
 
     private func persistPreferences() {
@@ -161,18 +182,31 @@ public final class AppState: ObservableObject {
         if isScanning { stopScanning() } else { startScanning() }
     }
 
+    public func currentPipelineConfig() -> SubtitlePipelineConfig {
+        let cfConfig = CloudflareConfig(
+            accountId: currentProfile.cloudflareAccountId,
+            apiToken: currentProfile.cloudflareApiToken,
+            model: currentProfile.cloudflareModel,
+            customPrompt: currentProfile.cloudflareCustomPrompt,
+            fallbackEnabled: currentProfile.cloudflareFallbackEnabled,
+            fallbackEngine: currentProfile.cloudflareFallbackEngine
+        )
+        return SubtitlePipelineConfig(
+            sourceLanguage: currentProfile.sourceLanguage,
+            targetLanguage: currentProfile.targetLanguage,
+            translationEngineType: currentProfile.translationEngineType,
+            mergeWrappedLines: currentProfile.mergeWrappedLines,
+            cloudflareConfig: cfConfig
+        )
+    }
+
     public func startScanning() {
         guard !isScanning else { return }
         isOverlaysVisible = true
         isScanning = true
         statusMessage = "Auto-scan active"
 
-        let config = SubtitlePipelineConfig(
-            sourceLanguage: currentProfile.sourceLanguage,
-            targetLanguage: currentProfile.targetLanguage,
-            translationEngineType: currentProfile.translationEngineType,
-            mergeWrappedLines: currentProfile.mergeWrappedLines
-        )
+        let config = currentPipelineConfig()
         let stream = subtitlePipeline.startScan(rect: currentProfile.sourceRect.cgRect, config: config, intervalSeconds: currentProfile.captureIntervalSeconds)
         scanTask = Task { @MainActor [weak self] in
             for await event in stream {
@@ -204,12 +238,7 @@ public final class AppState: ObservableObject {
         statusMessage = "Scanning..."
         isOCRActive = true
 
-        let config = SubtitlePipelineConfig(
-            sourceLanguage: currentProfile.sourceLanguage,
-            targetLanguage: currentProfile.targetLanguage,
-            translationEngineType: currentProfile.translationEngineType,
-            mergeWrappedLines: currentProfile.mergeWrappedLines
-        )
+        let config = currentPipelineConfig()
         Task { @MainActor [weak self] in
             guard let self = self else { return }
             defer {
@@ -247,12 +276,7 @@ public final class AppState: ObservableObject {
             guard let self = self else { return }
             let rect = self.currentProfile.sourceRect.cgRect
             guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
-            let config = SubtitlePipelineConfig(
-                sourceLanguage: self.currentProfile.sourceLanguage,
-                targetLanguage: self.currentProfile.targetLanguage,
-                translationEngineType: self.currentProfile.translationEngineType,
-                mergeWrappedLines: self.currentProfile.mergeWrappedLines
-            )
+            let config = self.currentPipelineConfig()
             let event = await self.subtitlePipeline.scanOnce(rect: rect, config: config)
             self.consumeSubtitleEvent(event)
         }

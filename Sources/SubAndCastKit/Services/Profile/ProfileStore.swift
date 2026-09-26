@@ -99,15 +99,19 @@ public final class ProfileStore: ObservableObject, ProfileStoreProtocol {
     @Published public private(set) var activeProfile: GameProfile = GameProfile()
 
     private let storage: ProfileStorageAdapter
+    private let userDefaults: UserDefaults
     private var debouncedSaveTask: Task<Void, Never>?
     private let debounceNanoseconds: UInt64
+    private static let lastActiveProfileKey = "lastActiveProfileId"
 
     public init(
         storage: ProfileStorageAdapter = DiskProfileStorageAdapter(),
-        debounceNanoseconds: UInt64 = 300_000_000
+        debounceNanoseconds: UInt64 = 300_000_000,
+        userDefaults: UserDefaults = .standard
     ) {
         self.storage = storage
         self.debounceNanoseconds = debounceNanoseconds
+        self.userDefaults = userDefaults
         loadAndHeal()
     }
 
@@ -128,7 +132,13 @@ public final class ProfileStore: ObservableObject, ProfileStoreProtocol {
         }
 
         self.profiles = validated
-        self.activeProfile = validated.first!
+        if let savedIdString = userDefaults.string(forKey: Self.lastActiveProfileKey),
+           let savedId = UUID(uuidString: savedIdString),
+           let target = validated.first(where: { $0.id == savedId }) {
+            self.activeProfile = target
+        } else {
+            self.activeProfile = validated.first!
+        }
     }
 
     private func healProfile(_ profile: GameProfile) -> GameProfile {
@@ -151,6 +161,7 @@ public final class ProfileStore: ObservableObject, ProfileStoreProtocol {
     public func selectProfile(id: UUID) {
         guard let target = profiles.first(where: { $0.id == id }) else { return }
         self.activeProfile = target
+        userDefaults.set(target.id.uuidString, forKey: Self.lastActiveProfileKey)
         scheduleAutoSave()
     }
 
@@ -160,6 +171,7 @@ public final class ProfileStore: ObservableObject, ProfileStoreProtocol {
         let healed = healProfile(newProfile)
         profiles.append(healed)
         activeProfile = healed
+        userDefaults.set(healed.id.uuidString, forKey: Self.lastActiveProfileKey)
         scheduleAutoSave()
         return healed
     }
@@ -169,6 +181,7 @@ public final class ProfileStore: ObservableObject, ProfileStoreProtocol {
         profiles.removeAll(where: { $0.id == id })
         if activeProfile.id == id {
             activeProfile = profiles.first ?? GameProfile()
+            userDefaults.set(activeProfile.id.uuidString, forKey: Self.lastActiveProfileKey)
         }
         scheduleAutoSave()
     }

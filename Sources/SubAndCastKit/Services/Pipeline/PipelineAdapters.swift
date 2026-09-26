@@ -72,6 +72,31 @@ public protocol TranslationProvider: Sendable {
         targetLanguage: String,
         engineType: String
     ) async throws -> String
+
+    func translate(
+        text: String,
+        sourceLanguage: String,
+        targetLanguage: String,
+        engineType: String,
+        cloudflareConfig: CloudflareConfig?
+    ) async throws -> String
+}
+
+extension TranslationProvider {
+    public func translate(
+        text: String,
+        sourceLanguage: String,
+        targetLanguage: String,
+        engineType: String,
+        cloudflareConfig: CloudflareConfig?
+    ) async throws -> String {
+        try await translate(
+            text: text,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            engineType: engineType
+        )
+    }
 }
 
 extension TranslationCoordinator: TranslationProvider {}

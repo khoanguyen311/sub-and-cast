@@ -9,17 +9,20 @@ public struct SubtitlePipelineConfig: Sendable, Equatable {
     public var targetLanguage: String
     public var translationEngineType: String
     public var mergeWrappedLines: Bool
+    public var cloudflareConfig: CloudflareConfig?
 
     public init(
         sourceLanguage: String = "en",
         targetLanguage: String = "vi",
         translationEngineType: String = "apple",
-        mergeWrappedLines: Bool = true
+        mergeWrappedLines: Bool = true,
+        cloudflareConfig: CloudflareConfig? = nil
     ) {
         self.sourceLanguage = sourceLanguage
         self.targetLanguage = targetLanguage
         self.translationEngineType = translationEngineType
         self.mergeWrappedLines = mergeWrappedLines
+        self.cloudflareConfig = cloudflareConfig
     }
 }
 
@@ -147,6 +150,7 @@ public final class SubtitlePipeline: SubtitlePipelineProtocol, @unchecked Sendab
     private var _lastRecognizedText: String = ""
     private var _lastTranslatedText: String = ""
     private var _lastConfidence: Float = 0
+    private var _lastConfig: SubtitlePipelineConfig?
 
     public var lastRecognizedText: String {
         lock.lock()
@@ -249,6 +253,7 @@ public final class SubtitlePipeline: SubtitlePipelineProtocol, @unchecked Sendab
         _lastRecognizedText = ""
         _lastTranslatedText = ""
         _lastConfidence = 0
+        _lastConfig = nil
     }
 
     /// Captures the specified region via captureProvider and executes the processing pipeline.
@@ -295,9 +300,15 @@ public final class SubtitlePipeline: SubtitlePipelineProtocol, @unchecked Sendab
             return .empty
         }
 
-        // 4. Check if text content is identical to last recognized (avoid re-translating static dialogue)
-        if !force && isSameAsLastRecognized(cleanOCR) {
-            return .unchanged
+        // 4. Check if text content matches previous scan with identical configuration
+        if isSameAsLastScan(cleanOCR, config: config) {
+            if !force {
+                return .unchanged
+            } else {
+                let prev = previousTranslationResult()
+                let conf = ocrResult.confidence > 0 ? ocrResult.confidence : prev.confidence
+                return .dialogue(sourceText: cleanOCR, translatedText: prev.translatedText, confidence: conf)
+            }
         }
 
         // 5. Translation
@@ -305,10 +316,11 @@ public final class SubtitlePipeline: SubtitlePipelineProtocol, @unchecked Sendab
             text: cleanOCR,
             sourceLanguage: config.sourceLanguage,
             targetLanguage: config.targetLanguage,
-            engineType: config.translationEngineType
+            engineType: config.translationEngineType,
+            cloudflareConfig: config.cloudflareConfig
         )
 
-        handleSuccessfulTranslation(source: cleanOCR, translated: translated, confidence: ocrResult.confidence)
+        handleSuccessfulTranslation(source: cleanOCR, translated: translated, confidence: ocrResult.confidence, config: config)
         return .dialogue(sourceText: cleanOCR, translatedText: translated, confidence: ocrResult.confidence)
     }
 
@@ -326,20 +338,37 @@ public final class SubtitlePipeline: SubtitlePipelineProtocol, @unchecked Sendab
         _lastRecognizedText = ""
         _lastTranslatedText = ""
         _lastConfidence = 0
+        _lastConfig = nil
     }
 
-    private func isSameAsLastRecognized(_ text: String) -> Bool {
+    private func isSameAsLastScan(_ text: String, config: SubtitlePipelineConfig) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        return _lastRecognizedText == text
+        guard !_lastTranslatedText.isEmpty,
+              _lastRecognizedText == text,
+              let lastConfig = _lastConfig,
+              lastConfig.sourceLanguage == config.sourceLanguage,
+              lastConfig.targetLanguage == config.targetLanguage,
+              lastConfig.translationEngineType == config.translationEngineType,
+              lastConfig.cloudflareConfig == config.cloudflareConfig else {
+            return false
+        }
+        return true
     }
 
-    private func handleSuccessfulTranslation(source: String, translated: String, confidence: Float) {
+    private func previousTranslationResult() -> (translatedText: String, confidence: Float) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (_lastTranslatedText, _lastConfidence)
+    }
+
+    private func handleSuccessfulTranslation(source: String, translated: String, confidence: Float, config: SubtitlePipelineConfig) {
         lock.lock()
         defer { lock.unlock() }
         _lastRecognizedText = source
         _lastTranslatedText = translated
         _lastConfidence = confidence
+        _lastConfig = config
     }
 
     // MARK: - OCR Language Mapping

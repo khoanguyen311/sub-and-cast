@@ -64,6 +64,13 @@ public struct GameProfile: Codable, Identifiable, Equatable {
     public var mergeWrappedLines: Bool
     public var fontSize: CGFloat
     public var backgroundOpacity: Double
+    public var cloudflareAccountId: String
+    public var cloudflareApiToken: String
+    public var cloudflareModel: String
+    public var cloudflarePromptPreset: String
+    public var cloudflareCustomPrompt: String
+    public var cloudflareFallbackEnabled: Bool
+    public var cloudflareFallbackEngine: String
 
     public init(
         id: UUID = UUID(),
@@ -79,7 +86,14 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         oneTimeFadeTimeoutSeconds: Double = 5.0,
         mergeWrappedLines: Bool = true,
         fontSize: CGFloat = 20.0,
-        backgroundOpacity: Double = 0.85
+        backgroundOpacity: Double = 0.85,
+        cloudflareAccountId: String = "",
+        cloudflareApiToken: String = "",
+        cloudflareModel: String = "@cf/meta/llama-3.2-3b-instruct",
+        cloudflarePromptPreset: String = PromptPreset.natural.rawValue,
+        cloudflareCustomPrompt: String = PromptPreset.natural.defaultPrompt,
+        cloudflareFallbackEnabled: Bool = true,
+        cloudflareFallbackEngine: String = "google_free"
     ) {
         self.id = id
         self.name = name
@@ -95,6 +109,13 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         self.mergeWrappedLines = mergeWrappedLines
         self.fontSize = fontSize
         self.backgroundOpacity = backgroundOpacity
+        self.cloudflareAccountId = cloudflareAccountId
+        self.cloudflareApiToken = cloudflareApiToken
+        self.cloudflareModel = cloudflareModel
+        self.cloudflarePromptPreset = cloudflarePromptPreset
+        self.cloudflareCustomPrompt = cloudflareCustomPrompt
+        self.cloudflareFallbackEnabled = cloudflareFallbackEnabled
+        self.cloudflareFallbackEngine = cloudflareFallbackEngine
     }
 
     public init(from decoder: Decoder) throws {
@@ -113,5 +134,12 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         self.mergeWrappedLines = try container.decodeIfPresent(Bool.self, forKey: .mergeWrappedLines) ?? true
         self.fontSize = try container.decodeIfPresent(CGFloat.self, forKey: .fontSize) ?? 20.0
         self.backgroundOpacity = try container.decodeIfPresent(Double.self, forKey: .backgroundOpacity) ?? 0.85
+        self.cloudflareAccountId = try container.decodeIfPresent(String.self, forKey: .cloudflareAccountId) ?? ""
+        self.cloudflareApiToken = try container.decodeIfPresent(String.self, forKey: .cloudflareApiToken) ?? ""
+        self.cloudflareModel = try container.decodeIfPresent(String.self, forKey: .cloudflareModel) ?? "@cf/meta/llama-3.2-3b-instruct"
+        self.cloudflarePromptPreset = try container.decodeIfPresent(String.self, forKey: .cloudflarePromptPreset) ?? PromptPreset.natural.rawValue
+        self.cloudflareCustomPrompt = try container.decodeIfPresent(String.self, forKey: .cloudflareCustomPrompt) ?? PromptPreset.natural.defaultPrompt
+        self.cloudflareFallbackEnabled = try container.decodeIfPresent(Bool.self, forKey: .cloudflareFallbackEnabled) ?? true
+        self.cloudflareFallbackEngine = try container.decodeIfPresent(String.self, forKey: .cloudflareFallbackEngine) ?? "google_free"
     }
 }

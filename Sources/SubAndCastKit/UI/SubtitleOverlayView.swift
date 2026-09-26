@@ -150,31 +150,51 @@ public struct SubtitleOverlayView: View {
 
     // MARK: - Playback Mode (Locked / Active scanning)
     private var playbackView: some View {
-        ZStack(alignment: .topLeading) {
-            if !appState.lastTranslatedText.isEmpty {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
-                    .shadow(color: .black.opacity(0.5 * appState.currentProfile.backgroundOpacity), radius: 6, x: 0, y: 3)
+        ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .topLeading) {
+                if !appState.lastTranslatedText.isEmpty {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
+                        .shadow(color: .black.opacity(0.5 * appState.currentProfile.backgroundOpacity), radius: 6, x: 0, y: 3)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(appState.lastTranslatedText)
-                        .font(.system(size: appState.currentProfile.fontSize, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .lineSpacing(4)
-                        .multilineTextAlignment(.leading)
-                        .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Spacer(minLength: 0)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(appState.lastTranslatedText)
+                            .font(.system(size: appState.currentProfile.fontSize, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineSpacing(4)
+                            .multilineTextAlignment(.leading)
+                            .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.top, 16)
+                    .padding(.leading, 20)
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 16)
                 }
-                .padding(.top, 16)
-                .padding(.leading, 20)
-                .padding(.trailing, 20)
-                .padding(.bottom, 16)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .opacity(opacity)
+            .animation(.easeInOut(duration: 0.3), value: opacity)
+
+            if let warning = appState.hudWarning {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 9, weight: .bold))
+                    Text(warning)
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.orange.opacity(0.9))
+                .foregroundColor(.black)
+                .clipShape(Capsule())
+                .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 1)
+                .padding([.top, .trailing], 10)
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .opacity(opacity)
-        .animation(.easeInOut(duration: 0.3), value: opacity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .allowsHitTesting(false)
         .onReceive(appState.$lastTranslatedText) { newText in
             guard !newText.isEmpty else { return }
