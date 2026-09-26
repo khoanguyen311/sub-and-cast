@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-public class FloatingOverlayPanel: NSPanel {
+public class FloatingOverlayPanel: NSPanel, OverlayWindowAdapter {
     public init(contentRect: NSRect) {
         super.init(
             contentRect: contentRect,

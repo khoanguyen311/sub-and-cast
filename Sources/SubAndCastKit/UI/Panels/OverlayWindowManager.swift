@@ -285,30 +285,25 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
         let screenHeight = screen.frame.height
 
         let positioning = isPositioning ?? AppState.shared.isPositioningOverlays
-        let offset = positioning ? OverlayLayoutConstants.headerOffset : 0
 
         isProgrammaticUpdate = true
         defer { isProgrammaticUpdate = false }
 
         // 1. Source capture panel always has headerOffset when active
-        let src = profile.sourceRect.cgRect
-        let srcAppKit = NSRect(
-            x: src.origin.x,
-            y: screenHeight - src.origin.y - src.height,
-            width: src.width,
-            height: src.height + OverlayLayoutConstants.headerOffset
+        let srcAppKit = OverlayCoordinator.appKitFrame(
+            from: profile.sourceRect.cgRect,
+            screenHeight: screenHeight,
+            includeHeader: true
         )
         if let sPanel = sourcePanel, sPanel.frame != srcAppKit {
             sPanel.setFrame(srcAppKit, display: true)
         }
 
         // 2. Subtitle panel has headerOffset only during positioning mode
-        let dst = profile.displayRect.cgRect
-        let dstAppKit = NSRect(
-            x: dst.origin.x,
-            y: screenHeight - dst.origin.y - dst.height,
-            width: dst.width,
-            height: dst.height + offset
+        let dstAppKit = OverlayCoordinator.appKitFrame(
+            from: profile.displayRect.cgRect,
+            screenHeight: screenHeight,
+            includeHeader: positioning
         )
         if let subPanel = subtitlePanel, subPanel.frame != dstAppKit {
             subPanel.setFrame(dstAppKit, display: true)
@@ -345,26 +340,19 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
 
         let screenHeight = screen.frame.height
         let frame = window.frame
-        let offset = OverlayLayoutConstants.headerOffset
 
         if window == sourcePanel {
-            let boxHeight = max(CodableRect.minHeight, frame.height - offset)
-            let boxWidth = max(CodableRect.minWidth, frame.width)
-            let cgRect = CGRect(
-                x: max(0, frame.origin.x),
-                y: max(0, screenHeight - frame.origin.y - boxHeight),
-                width: boxWidth,
-                height: boxHeight
+            let cgRect = OverlayCoordinator.coreGraphicsRect(
+                from: frame,
+                screenHeight: screenHeight,
+                headerIsPresent: true
             )
             appState.updateSourceRectLive(cgRect)
         } else if window == subtitlePanel {
-            let boxHeight = max(CodableRect.minHeight, frame.height - offset)
-            let boxWidth = max(CodableRect.minWidth, frame.width)
-            let cgRect = CGRect(
-                x: max(0, frame.origin.x),
-                y: max(0, screenHeight - frame.origin.y - boxHeight),
-                width: boxWidth,
-                height: boxHeight
+            let cgRect = OverlayCoordinator.coreGraphicsRect(
+                from: frame,
+                screenHeight: screenHeight,
+                headerIsPresent: true
             )
             appState.updateDisplayRectLive(cgRect)
         }

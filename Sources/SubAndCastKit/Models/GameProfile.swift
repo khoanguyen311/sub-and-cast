@@ -1,7 +1,7 @@
 import Foundation
 import CoreGraphics
 
-public struct CodableRect: Codable, Equatable {
+public struct CodableRect: Codable, Equatable, Sendable {
     public static let minWidth: CGFloat = 120
     public static let minHeight: CGFloat = 40
 

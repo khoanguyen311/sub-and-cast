@@ -56,6 +56,7 @@ public final class AppState: ObservableObject {
     public var profileStore: ProfileStore
     public var subtitlePipeline: SubtitlePipelineProtocol
     public var shortcutRegistry: ShortcutRegistry
+    public var overlayCoordinator: OverlayCoordinator
 
     private var scanTask: Task<Void, Never>?
     private var hotkeyTask: Task<Void, Never>?
@@ -63,13 +64,15 @@ public final class AppState: ObservableObject {
     public init(
         subtitlePipeline: SubtitlePipelineProtocol? = nil,
         profileStore: ProfileStore? = nil,
-        shortcutRegistry: ShortcutRegistry? = nil
+        shortcutRegistry: ShortcutRegistry? = nil,
+        overlayCoordinator: OverlayCoordinator? = nil
     ) {
         self.subtitlePipeline = subtitlePipeline ?? SubtitlePipeline()
         let store = profileStore ?? ProfileStore.shared
         self.profileStore = store
         let registry = shortcutRegistry ?? ShortcutRegistry.shared
         self.shortcutRegistry = registry
+        self.overlayCoordinator = overlayCoordinator ?? OverlayCoordinator.shared
         self.profiles = store.profiles
         self.currentProfile = store.activeProfile
 
@@ -147,12 +150,11 @@ public final class AppState: ObservableObject {
         }
     }
 
-    private var prePositioningSourceRect: CodableRect?
-    private var prePositioningDisplayRect: CodableRect?
-
     public func startPositioningOverlays() {
-        prePositioningSourceRect = currentProfile.sourceRect
-        prePositioningDisplayRect = currentProfile.displayRect
+        overlayCoordinator.beginPositioning(
+            sourceRect: currentProfile.sourceRect,
+            displayRect: currentProfile.displayRect
+        )
         isOverlaysVisible = true
         isPositioningOverlays = true
         isLocked = false
@@ -160,6 +162,7 @@ public final class AppState: ObservableObject {
     }
 
     public func finishPositioningOverlays() {
+        overlayCoordinator.commitPositioning()
         isPositioningOverlays = false
         isLocked = true
         if !isScanning {
@@ -170,14 +173,12 @@ public final class AppState: ObservableObject {
         lastRecognizedText = ""
         saveCurrentProfile()
         statusMessage = "Overlays Saved & Locked"
-        prePositioningSourceRect = nil
-        prePositioningDisplayRect = nil
     }
 
     public func cancelPositioningOverlays() {
-        if let src = prePositioningSourceRect, let dst = prePositioningDisplayRect {
-            currentProfile.sourceRect = src
-            currentProfile.displayRect = dst
+        if let original = overlayCoordinator.cancelPositioning() {
+            currentProfile.sourceRect = original.source
+            currentProfile.displayRect = original.display
         }
         isPositioningOverlays = false
         isLocked = true
@@ -188,8 +189,6 @@ public final class AppState: ObservableObject {
         lastTranslatedText = ""
         lastRecognizedText = ""
         statusMessage = "Positioning Cancelled"
-        prePositioningSourceRect = nil
-        prePositioningDisplayRect = nil
     }
 
     public func toggleLock() {

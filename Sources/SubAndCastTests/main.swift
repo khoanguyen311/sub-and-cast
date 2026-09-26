@@ -877,6 +877,87 @@ struct TestRunner {
             }
         }
 
+        // Test 16: OverlayCoordinator Coordinate Inversion Math, Clamping & Undo Sessions
+        do {
+            await MainActor.run {
+                let screenHeight: CGFloat = 1080
+
+                // 1. Inversion Math: CoreGraphics -> AppKit
+                // Box at CG (100, 200, width: 400, height: 100)
+                let cgBox = CGRect(x: 100, y: 200, width: 400, height: 100)
+                let appKitWithHeader = OverlayCoordinator.appKitFrame(
+                    from: cgBox,
+                    screenHeight: screenHeight,
+                    includeHeader: true
+                )
+                // AppKit Y = 1080 - 200 - 100 = 780. Height = 100 + 36 = 136.
+                assertTest(appKitWithHeader.origin.x == 100, "OverlayCoordinator preserves X coordinate in AppKit conversion")
+                assertTest(appKitWithHeader.origin.y == 780, "OverlayCoordinator calculates bottom-left Y coordinate correctly")
+                assertTest(appKitWithHeader.width == 400, "OverlayCoordinator preserves box width")
+                assertTest(appKitWithHeader.height == 136, "OverlayCoordinator adds 36pt header offset when includeHeader is true")
+
+                let appKitNoHeader = OverlayCoordinator.appKitFrame(
+                    from: cgBox,
+                    screenHeight: screenHeight,
+                    includeHeader: false
+                )
+                assertTest(appKitNoHeader.height == 100, "OverlayCoordinator omits header offset when includeHeader is false")
+
+                // 2. Inversion Math: AppKit -> CoreGraphics
+                let cgRecovered = OverlayCoordinator.coreGraphicsRect(
+                    from: appKitWithHeader,
+                    screenHeight: screenHeight,
+                    headerIsPresent: true
+                )
+                assertTest(cgRecovered.origin.x == 100, "OverlayCoordinator recovers original CoreGraphics X")
+                assertTest(cgRecovered.origin.y == 200, "OverlayCoordinator recovers original CoreGraphics Y")
+                assertTest(cgRecovered.width == 400, "OverlayCoordinator recovers original box width")
+                assertTest(cgRecovered.height == 100, "OverlayCoordinator subtracts 36pt header to recover box height")
+
+                // 3. Minimum Boundary Clamping
+                let tinyRect = CGRect(x: -50, y: -20, width: 10, height: 5)
+                let clamped = OverlayCoordinator.clampRect(tinyRect)
+                assertTest(clamped.origin.x == 0, "OverlayCoordinator clamps negative X to 0")
+                assertTest(clamped.origin.y == 0, "OverlayCoordinator clamps negative Y to 0")
+                assertTest(clamped.width == CodableRect.minWidth, "OverlayCoordinator clamps width to minWidth (120)")
+                assertTest(clamped.height == CodableRect.minHeight, "OverlayCoordinator clamps height to minHeight (40)")
+
+                // 4. Positioning Session State Machine & Undo Rollback
+                let coordinator = OverlayCoordinator()
+                let initialSource = CodableRect(x: 100, y: 150, width: 350, height: 80)
+                let initialDisplay = CodableRect(x: 100, y: 300, width: 450, height: 90)
+
+                assertTest(coordinator.isPositioning == false, "OverlayCoordinator initially locked")
+
+                // Begin positioning
+                coordinator.beginPositioning(sourceRect: initialSource, displayRect: initialDisplay)
+                assertTest(coordinator.isPositioning == true, "OverlayCoordinator transitions to positioning state")
+
+                // Cancel positioning should return exact snapshots
+                let rollback = coordinator.cancelPositioning()
+                assertTest(rollback?.source == initialSource, "OverlayCoordinator cancel returns initial source rect snapshot")
+                assertTest(rollback?.display == initialDisplay, "OverlayCoordinator cancel returns initial display rect snapshot")
+                assertTest(coordinator.isPositioning == false, "OverlayCoordinator returns to locked state on cancel")
+
+                // Commit positioning
+                coordinator.beginPositioning(sourceRect: initialSource, displayRect: initialDisplay)
+                let committed = coordinator.commitPositioning()
+                assertTest(committed == true, "OverlayCoordinator commit succeeds when positioning")
+                assertTest(coordinator.isPositioning == false, "OverlayCoordinator returns to locked state on commit")
+
+                // 5. MockOverlayWindowAdapter
+                let mockPanel = MockOverlayWindowAdapter()
+                mockPanel.orderFrontRegardless()
+                assertTest(mockPanel.isVisible == true, "MockOverlayWindowAdapter tracks orderFrontRegardless")
+                mockPanel.makeKey()
+                assertTest(mockPanel.isKeyWindow == true, "MockOverlayWindowAdapter tracks makeKey")
+                mockPanel.setLocked(true)
+                assertTest(mockPanel.isLocked == true, "MockOverlayWindowAdapter tracks setLocked")
+                mockPanel.orderOut(nil)
+                assertTest(mockPanel.isVisible == false, "MockOverlayWindowAdapter tracks orderOut")
+            }
+        }
+
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")
         if failed > 0 {
             exit(1)
