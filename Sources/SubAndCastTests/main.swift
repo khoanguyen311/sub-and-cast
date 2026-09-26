@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import CoreText
 import SubAndCastKit
 
 @main
@@ -424,6 +425,112 @@ struct TestRunner {
             assertTest(true, "ScreenCaptureManager and TranslationCoordinator conform to adapter protocols")
         } catch {
             print("  ❌ [FAIL] Pipeline Adapters Error: \(error)")
+            failed += 1
+        }
+
+        // Test 10: SubtitlePipeline End-to-End Headless Tests
+        do {
+            // Helper to render readable text into a CGImage bitmap for Vision OCR
+            func makeRenderedTextImage(text: String, width: Int = 500, height: Int = 100) -> CGImage {
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                let ctx = CGContext(
+                    data: nil,
+                    width: width,
+                    height: height,
+                    bitsPerComponent: 8,
+                    bytesPerRow: width * 4,
+                    space: colorSpace,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                )!
+                // Black background
+                ctx.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1.0))
+                ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+
+                if !text.isEmpty {
+                    let font = CTFontCreateWithName("Helvetica" as CFString, 26, nil)
+                    let attributes: [NSAttributedString.Key: Any] = [
+                        .font: font,
+                        .foregroundColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1)
+                    ]
+                    let attrString = CFAttributedStringCreate(nil, text as CFString, attributes as CFDictionary)!
+                    let line = CTLineCreateWithAttributedString(attrString)
+                    ctx.textPosition = CGPoint(x: 20, y: 35)
+                    CTLineDraw(line, ctx)
+                }
+                return ctx.makeImage()!
+            }
+
+            let mockCapture = StaticImageFrameProvider()
+            let mockTranslator = MockTranslationProvider(prefix: "TRANSLATED")
+            let pipeline = SubtitlePipeline(
+                captureProvider: mockCapture,
+                translationProvider: mockTranslator
+            )
+
+            let testConfig = SubtitlePipelineConfig(
+                sourceLanguage: "en",
+                targetLanguage: "vi",
+                translationEngineType: "apple",
+                mergeWrappedLines: true
+            )
+            let testRect = CGRect(x: 100, y: 200, width: 500, height: 100)
+
+            // Step 1: Empty/blank image should emit .empty
+            let blankImage = makeRenderedTextImage(text: "")
+            mockCapture.setImages([blankImage])
+            let emptyOutput = try await pipeline.process(rect: testRect, config: testConfig, force: false)
+            assertTest(emptyOutput == .empty, "SubtitlePipeline emits .empty for image with no text")
+            assertTest(pipeline.lastRecognizedText == "", "SubtitlePipeline clears lastRecognizedText on empty frame")
+
+            // Step 2: New frame with text should emit .dialogue(...)
+            let textImage1 = makeRenderedTextImage(text: "Hello World")
+            mockCapture.setImages([textImage1])
+            let dialogueOutput1 = try await pipeline.process(rect: testRect, config: testConfig, force: false)
+            if case let .dialogue(src, trans, _) = dialogueOutput1 {
+                assertTest(src.contains("Hello World"), "SubtitlePipeline recognized text contains 'Hello World'")
+                assertTest(trans == "TRANSLATED: \(src)", "SubtitlePipeline translated dialogue with mock translation")
+            } else {
+                assertTest(false, "SubtitlePipeline should emit .dialogue for recognized text")
+            }
+            assertTest(mockTranslator.callCount == 1, "SubtitlePipeline invoked translation provider once")
+
+            // Step 3: Consecutive identical frame should emit .unchanged without calling translation again
+            mockCapture.setImages([textImage1])
+            let unchangedOutput = try await pipeline.process(rect: testRect, config: testConfig, force: false)
+            assertTest(unchangedOutput == .unchanged, "SubtitlePipeline emits .unchanged for identical frame")
+            assertTest(mockTranslator.callCount == 1, "SubtitlePipeline bypassed translation provider on unchanged frame")
+
+            // Step 4: Forced scan on unchanged frame should bypass difference check and re-translate
+            mockCapture.setImages([textImage1])
+            let forcedOutput = try await pipeline.process(rect: testRect, config: testConfig, force: true)
+            if case let .dialogue(src, _, _) = forcedOutput {
+                assertTest(src.contains("Hello World"), "SubtitlePipeline forced scan re-evaluates frame")
+            } else {
+                assertTest(false, "SubtitlePipeline forced scan should emit .dialogue")
+            }
+            assertTest(mockTranslator.callCount == 2, "SubtitlePipeline re-translated when force is true")
+
+            // Step 5: Process next dialogue frame
+            let textImage2 = makeRenderedTextImage(text: "Farewell friend")
+            mockCapture.setImages([textImage2])
+            let dialogueOutput2 = try await pipeline.process(rect: testRect, config: testConfig, force: false)
+            if case let .dialogue(src, _, _) = dialogueOutput2 {
+                assertTest(src.contains("Farewell friend"), "SubtitlePipeline detects updated dialogue")
+            } else {
+                assertTest(false, "SubtitlePipeline should emit .dialogue for new text")
+            }
+            assertTest(mockTranslator.callCount == 3, "SubtitlePipeline invoked translation for new text")
+
+            // Step 6: Invalid small rect returns .empty immediately
+            let invalidRect = CGRect(x: 0, y: 0, width: 20, height: 10)
+            let invalidOutput = try await pipeline.process(rect: invalidRect, config: testConfig, force: false)
+            assertTest(invalidOutput == .empty, "SubtitlePipeline returns .empty for rect smaller than minimum size")
+
+            // Step 7: Reset clears caches
+            pipeline.reset()
+            assertTest(pipeline.lastRecognizedText == "" && pipeline.lastTranslatedText == "", "SubtitlePipeline reset() clears text caches")
+        } catch {
+            print("  ❌ [FAIL] SubtitlePipeline Test Error: \(error)")
             failed += 1
         }
 
