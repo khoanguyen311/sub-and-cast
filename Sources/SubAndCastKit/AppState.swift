@@ -55,13 +55,21 @@ public final class AppState: ObservableObject {
 
     public var profileStore: ProfileStore
     public var subtitlePipeline: SubtitlePipelineProtocol
+    public var shortcutRegistry: ShortcutRegistry
 
     private var scanTask: Task<Void, Never>?
+    private var hotkeyTask: Task<Void, Never>?
 
-    public init(subtitlePipeline: SubtitlePipelineProtocol? = nil, profileStore: ProfileStore? = nil) {
+    public init(
+        subtitlePipeline: SubtitlePipelineProtocol? = nil,
+        profileStore: ProfileStore? = nil,
+        shortcutRegistry: ShortcutRegistry? = nil
+    ) {
         self.subtitlePipeline = subtitlePipeline ?? SubtitlePipeline()
         let store = profileStore ?? ProfileStore.shared
         self.profileStore = store
+        let registry = shortcutRegistry ?? ShortcutRegistry.shared
+        self.shortcutRegistry = registry
         self.profiles = store.profiles
         self.currentProfile = store.activeProfile
 
@@ -104,6 +112,21 @@ public final class AppState: ObservableObject {
             self.assistiveTouchIdleOpacity = min(max(0.0, savedOpacity), 1.0)
         } else {
             self.assistiveTouchIdleOpacity = 0.30
+        }
+
+        let stream = registry.actionStream
+        self.hotkeyTask = Task { @MainActor [weak self] in
+            for await action in stream {
+                guard let self = self else { break }
+                switch action {
+                case .toggleScan:
+                    self.toggleScanning()
+                case .togglePositioning:
+                    self.toggleLock()
+                case .oneTimeScan:
+                    self.triggerOneTimeScan()
+                }
+            }
         }
     }
 

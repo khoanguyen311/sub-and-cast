@@ -808,6 +808,75 @@ struct TestRunner {
             failed += 1
         }
 
+        // Test 15: ShortcutRegistry with MockHotkeyEventSource and ActionStream
+        do {
+            await MainActor.run {
+                let mockSource = MockHotkeyEventSource()
+                let testDefaultsSuite = "test_shortcut_registry_\(UUID().uuidString)"
+                let testDefaults = UserDefaults(suiteName: testDefaultsSuite)!
+                defer { UserDefaults.standard.removePersistentDomain(forName: testDefaultsSuite) }
+
+                let registry = ShortcutRegistry(eventSource: mockSource, userDefaults: testDefaults)
+
+                let key1 = AppHotkey(keyCode: 1, modifiers: 256)
+                let key2 = AppHotkey(keyCode: 2, modifiers: 256)
+
+                // Assignment
+                registry.setHotkey(key1, for: .toggleScan)
+                assertTest(registry.toggleScanHotkey == key1, "ShortcutRegistry sets toggleScan hotkey")
+                assertTest(mockSource.registeredHotkey(for: .toggleScan) == key1, "MockHotkeyEventSource receives registration for toggleScan")
+
+                registry.setHotkey(key2, for: .togglePositioning)
+                assertTest(registry.togglePositioningHotkey == key2, "ShortcutRegistry sets togglePositioning hotkey")
+                assertTest(mockSource.registeredHotkey(for: .togglePositioning) == key2, "MockHotkeyEventSource receives registration for togglePositioning")
+
+                // Conflict Resolution: assigning key1 to togglePositioning should clear toggleScan
+                registry.setHotkey(key1, for: .togglePositioning)
+                assertTest(registry.togglePositioningHotkey == key1, "ShortcutRegistry reassigns key to togglePositioning")
+                assertTest(registry.toggleScanHotkey == nil, "ShortcutRegistry auto-unbinds conflicting hotkey from toggleScan")
+                assertTest(mockSource.registeredHotkey(for: .toggleScan) == nil, "MockHotkeyEventSource unregisters conflicting toggleScan")
+
+                // Persistence reload
+                let reloadedRegistry = ShortcutRegistry(eventSource: mockSource, userDefaults: testDefaults)
+                assertTest(reloadedRegistry.togglePositioningHotkey == key1, "ShortcutRegistry reloads persisted hotkey")
+                assertTest(reloadedRegistry.toggleScanHotkey == nil, "ShortcutRegistry reloads nil for cleared hotkey")
+            }
+
+            // Stream action emission
+            let mockSource = MockHotkeyEventSource()
+            let testDefaultsSuite = "test_shortcut_stream_\(UUID().uuidString)"
+            let testDefaults = UserDefaults(suiteName: testDefaultsSuite)!
+            defer { UserDefaults.standard.removePersistentDomain(forName: testDefaultsSuite) }
+
+            let (registry, stream) = await MainActor.run { () -> (ShortcutRegistry, AsyncStream<HotkeyAction>) in
+                let reg = ShortcutRegistry(eventSource: mockSource, userDefaults: testDefaults)
+                return (reg, reg.actionStream)
+            }
+            _ = registry
+
+            var emittedActions: [HotkeyAction] = []
+            let streamTask = Task {
+                for await action in stream {
+                    emittedActions.append(action)
+                    if emittedActions.count >= 2 {
+                        break
+                    }
+                }
+            }
+
+            // Simulate key presses via MockHotkeyEventSource
+            mockSource.simulateKeyPress(for: .toggleScan)
+            mockSource.simulateKeyPress(for: .oneTimeScan)
+
+            _ = await streamTask.result
+
+            assertTest(emittedActions.count == 2, "ShortcutRegistry actionStream received 2 simulated actions")
+            if emittedActions.count == 2 {
+                assertTest(emittedActions[0] == .toggleScan, "actionStream received .toggleScan first")
+                assertTest(emittedActions[1] == .oneTimeScan, "actionStream received .oneTimeScan second")
+            }
+        }
+
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")
         if failed > 0 {
             exit(1)

@@ -2,6 +2,28 @@ import Foundation
 import AppKit
 import Carbon
 
+public enum HotkeyAction: UInt32, CaseIterable, Sendable {
+    case toggleScan = 1
+    case togglePositioning = 2
+    case oneTimeScan = 3
+
+    public var displayName: String {
+        switch self {
+        case .toggleScan: return "Toggle Auto Scan"
+        case .togglePositioning: return "Toggle Positioning Mode"
+        case .oneTimeScan: return "One-Time Scan"
+        }
+    }
+
+    public var userDefaultsKey: String {
+        switch self {
+        case .toggleScan: return "hotkey_toggleScan"
+        case .togglePositioning: return "hotkey_togglePositioning"
+        case .oneTimeScan: return "hotkey_oneTimeScan"
+        }
+    }
+}
+
 public struct AppHotkey: Codable, Equatable, Hashable, Sendable {
     public var keyCode: UInt32
     public var modifiers: UInt32
