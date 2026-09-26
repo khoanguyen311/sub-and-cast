@@ -600,6 +600,81 @@ struct TestRunner {
             failed += 1
         }
 
+        // Test 12: AppState Auto-Scan Cycle & SubtitlePipeline Integration
+        do {
+            final class AutoScanMockPipeline: SubtitlePipelineProtocol, @unchecked Sendable {
+                var outputToReturn: SubtitlePipelineOutput = .dialogue(sourceText: "Dialogue line 1", translatedText: "Dòng thoại 1", confidence: 0.99)
+                var resetCalled = false
+                var processCallCount = 0
+
+                func process(rect: CGRect, config: SubtitlePipelineConfig, force: Bool) async throws -> SubtitlePipelineOutput {
+                    processCallCount += 1
+                    return outputToReturn
+                }
+
+                func process(image: CGImage, config: SubtitlePipelineConfig, force: Bool) async throws -> SubtitlePipelineOutput {
+                    return outputToReturn
+                }
+
+                func reset() {
+                    resetCalled = true
+                }
+            }
+
+            let mockPipe = AutoScanMockPipeline()
+            let state = await MainActor.run { () -> AppState in
+                let s = AppState(subtitlePipeline: mockPipe)
+                s.currentProfile.sourceRect = CodableRect(x: 100, y: 100, width: 300, height: 100)
+                s.currentProfile.captureIntervalSeconds = 0.3
+                return s
+            }
+
+            // Start scanning calls reset() on pipeline
+            await MainActor.run {
+                state.startScanning()
+                assertTest(mockPipe.resetCalled == true, "startScanning() calls subtitlePipeline.reset()")
+                assertTest(state.isScanning == true, "startScanning() sets isScanning true")
+            }
+
+            // Wait for at least one scan cycle to run
+            try await Task.sleep(nanoseconds: 150_000_000)
+
+            await MainActor.run {
+                assertTest(state.isDialoguePresent == true, "Auto-scan cycle sets isDialoguePresent true on dialogue")
+                assertTest(state.lastRecognizedText == "Dialogue line 1", "Auto-scan cycle updates lastRecognizedText")
+                assertTest(state.lastTranslatedText == "Dòng thoại 1", "Auto-scan cycle updates lastTranslatedText")
+
+                // Next cycle returns .unchanged: dialogue should remain present
+                mockPipe.outputToReturn = .unchanged
+            }
+
+            try await Task.sleep(nanoseconds: 350_000_000)
+
+            await MainActor.run {
+                assertTest(state.isDialoguePresent == true, "Auto-scan cycle preserves isDialoguePresent on .unchanged")
+
+                // Next cycle returns .empty: dialogue should become false and recognized text cleared
+                mockPipe.outputToReturn = .empty
+            }
+
+            try await Task.sleep(nanoseconds: 350_000_000)
+
+            await MainActor.run {
+                assertTest(state.isDialoguePresent == false, "Auto-scan cycle sets isDialoguePresent false on .empty")
+                assertTest(state.lastRecognizedText == "", "Auto-scan cycle clears lastRecognizedText on .empty")
+
+                state.stopScanning()
+                assertTest(state.isScanning == false, "stopScanning() stops scanning task")
+
+                // Language mapping verification
+                assertTest(state.ocrLanguages(for: "ja") == ["ja-JP", "en-US"], "AppState.ocrLanguages maps ja correctly")
+                assertTest(state.ocrLanguages(for: "vi") == ["vi-VN", "en-US"], "AppState.ocrLanguages maps vi correctly")
+            }
+        } catch {
+            print("  ❌ [FAIL] AppState Auto-Scan Cycle Error: \(error)")
+            failed += 1
+        }
+
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")
         if failed > 0 {
             exit(1)

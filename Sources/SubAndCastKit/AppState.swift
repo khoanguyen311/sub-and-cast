@@ -56,10 +56,6 @@ public final class AppState: ObservableObject {
     public var subtitlePipeline: SubtitlePipelineProtocol
 
     private var scanTask: Task<Void, Never>?
-    private let captureManager = ScreenCaptureManager()
-    private let imageDiffer = ImageDiffer()
-    private let ocrManager = VisionOCRManager()
-    private let translationCoordinator = TranslationCoordinator.shared
 
     public init(subtitlePipeline: SubtitlePipelineProtocol? = nil) {
         self.subtitlePipeline = subtitlePipeline ?? SubtitlePipeline()
@@ -192,7 +188,7 @@ public final class AppState: ObservableObject {
         isOverlaysVisible = true
         isScanning = true
         statusMessage = "Auto-scan active"
-        imageDiffer.reset()
+        subtitlePipeline.reset()
 
         scanTask = Task { [weak self] in
             while !Task.isCancelled {
@@ -270,17 +266,7 @@ public final class AppState: ObservableObject {
     }
 
     public func ocrLanguages(for sourceLanguage: String) -> [String] {
-        switch sourceLanguage.lowercased() {
-        case "ja": return ["ja-JP", "en-US"]
-        case "zh", "zh-hans": return ["zh-Hans", "en-US"]
-        case "zh-hant": return ["zh-Hant", "en-US"]
-        case "ko": return ["ko-KR", "en-US"]
-        case "vi": return ["vi-VN", "en-US"]
-        case "fr": return ["fr-FR", "en-US"]
-        case "de": return ["de-DE", "en-US"]
-        case "es": return ["es-ES", "en-US"]
-        default: return ["en-US"]
-        }
+        return SubtitlePipeline.ocrLanguages(for: sourceLanguage)
     }
 
     public func testTranslate() {
@@ -293,65 +279,39 @@ public final class AppState: ObservableObject {
 
     private func performScanCycle(force: Bool = false) async {
         let rect = currentProfile.sourceRect.cgRect
-        guard rect.width > 10 && rect.height > 10 else { return }
+        guard rect.width >= CodableRect.minWidth && rect.height >= CodableRect.minHeight else { return }
+
+        let config = SubtitlePipelineConfig(
+            sourceLanguage: currentProfile.sourceLanguage,
+            targetLanguage: currentProfile.targetLanguage,
+            translationEngineType: currentProfile.translationEngineType,
+            mergeWrappedLines: currentProfile.mergeWrappedLines
+        )
+
+        self.isOCRActive = true
+        defer { self.isOCRActive = false }
 
         do {
-            let capturedImage = try await captureManager.captureRegion(rect: rect)
+            let output = try await subtitlePipeline.process(rect: rect, config: config, force: force)
 
-            // If not forced, check if image actually changed to save OCR/translation power
-            if !force && !imageDiffer.hasImageChanged(cgImage: capturedImage) {
+            switch output {
+            case .unchanged:
                 // Unchanged frame: if dialogue was already recognized, keep it present
                 if !lastRecognizedText.isEmpty {
                     self.isDialoguePresent = true
                 }
-                return
-            }
-
-            self.isOCRActive = true
-
-            // OCR languages based on profile source language
-            let ocrLangs = ocrLanguages(for: currentProfile.sourceLanguage)
-
-            let ocrResult = try await ocrManager.recognizeText(
-                in: capturedImage,
-                recognitionLanguages: ocrLangs,
-                mergeWrappedLines: currentProfile.mergeWrappedLines
-            )
-            self.isOCRActive = false
-
-            let cleanOCR = ocrResult.fullText.trimmingCharacters(in: .whitespacesAndNewlines)
-
-            // If no text was recognized in the captured frame:
-            if cleanOCR.isEmpty {
+            case .empty:
                 if isDialoguePresent {
                     self.isDialoguePresent = false
                     self.lastRecognizedText = ""
                 }
-                return
+            case let .dialogue(sourceText, translatedText, _):
+                self.isDialoguePresent = true
+                self.lastRecognizedText = sourceText
+                self.lastTranslatedText = translatedText
+                self.statusMessage = "Translated (\(currentProfile.sourceLanguage.uppercased()) → \(currentProfile.targetLanguage.uppercased()))"
             }
-
-            // Dialogue text is present
-            self.isDialoguePresent = true
-
-            // If text hasn't changed, skip translation
-            if cleanOCR == self.lastRecognizedText {
-                return
-            }
-
-            self.lastRecognizedText = cleanOCR
-            self.statusMessage = "Translating..."
-
-            let translated = try await translationCoordinator.translate(
-                text: cleanOCR,
-                sourceLanguage: currentProfile.sourceLanguage,
-                targetLanguage: currentProfile.targetLanguage,
-                engineType: currentProfile.translationEngineType
-            )
-
-            self.lastTranslatedText = translated
-            self.statusMessage = "Translated (\(currentProfile.sourceLanguage.uppercased()) → \(currentProfile.targetLanguage.uppercased()))"
         } catch {
-            self.isOCRActive = false
             self.statusMessage = "Error: \(error.localizedDescription)"
         }
     }
