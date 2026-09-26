@@ -534,6 +534,72 @@ struct TestRunner {
             failed += 1
         }
 
+        // Test 11: AppState One-Time Scan Integration with SubtitlePipeline
+        do {
+            final class MockPipeline: SubtitlePipelineProtocol, @unchecked Sendable {
+                var simulatedOutput: SubtitlePipelineOutput = .dialogue(sourceText: "Hello", translatedText: "Xin chào", confidence: 0.95)
+                var shouldThrow = false
+                var receivedForce: Bool?
+
+                func process(rect: CGRect, config: SubtitlePipelineConfig, force: Bool) async throws -> SubtitlePipelineOutput {
+                    receivedForce = force
+                    if shouldThrow {
+                        throw NSError(domain: "MockPipeline", code: -1, userInfo: [NSLocalizedDescriptionKey: "Simulated failure"])
+                    }
+                    return simulatedOutput
+                }
+
+                func process(image: CGImage, config: SubtitlePipelineConfig, force: Bool) async throws -> SubtitlePipelineOutput {
+                    return simulatedOutput
+                }
+
+                func reset() {}
+            }
+
+            let mockPipe = MockPipeline()
+            let testState = await MainActor.run { () -> AppState in
+                let state = AppState(subtitlePipeline: mockPipe)
+                state.currentProfile.sourceRect = CodableRect(x: 100, y: 100, width: 200, height: 100)
+                state.triggerOneTimeScan()
+                return state
+            }
+
+            // Allow Task on MainActor to complete
+            try await Task.sleep(nanoseconds: 100_000_000)
+
+            await MainActor.run {
+                assertTest(mockPipe.receivedForce == true, "AppState delegates one-time scan with force: true")
+                assertTest(testState.lastRecognizedText == "Hello", "AppState one-time scan updates lastRecognizedText")
+                assertTest(testState.lastTranslatedText == "Xin chào", "AppState one-time scan updates lastTranslatedText")
+                assertTest(testState.isOneTimeSubtitleVisible == true, "AppState one-time scan sets isOneTimeSubtitleVisible true")
+                assertTest(testState.oneTimeScanTriggerCount >= 1, "AppState one-time scan increments trigger count")
+                assertTest(testState.statusMessage.contains("Translated"), "AppState one-time scan updates status message on success")
+
+                // Test empty output handling
+                mockPipe.simulatedOutput = .empty
+                testState.triggerOneTimeScan()
+            }
+
+            try await Task.sleep(nanoseconds: 100_000_000)
+
+            await MainActor.run {
+                assertTest(testState.statusMessage == "No text detected", "AppState one-time scan sets status on empty output")
+
+                // Test error handling
+                mockPipe.shouldThrow = true
+                testState.triggerOneTimeScan()
+            }
+
+            try await Task.sleep(nanoseconds: 100_000_000)
+
+            await MainActor.run {
+                assertTest(testState.statusMessage.contains("Error:"), "AppState one-time scan surfaces errors in statusMessage")
+            }
+        } catch {
+            print("  ❌ [FAIL] AppState One-Time Scan Error: \(error)")
+            failed += 1
+        }
+
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")
         if failed > 0 {
             exit(1)

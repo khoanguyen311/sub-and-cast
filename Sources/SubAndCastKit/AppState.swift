@@ -53,13 +53,16 @@ public final class AppState: ObservableObject {
     }
     @Published public var isAssistiveQuickMenuOpen: Bool = false
 
+    public var subtitlePipeline: SubtitlePipelineProtocol
+
     private var scanTask: Task<Void, Never>?
     private let captureManager = ScreenCaptureManager()
     private let imageDiffer = ImageDiffer()
     private let ocrManager = VisionOCRManager()
     private let translationCoordinator = TranslationCoordinator.shared
 
-    public init() {
+    public init(subtitlePipeline: SubtitlePipelineProtocol? = nil) {
+        self.subtitlePipeline = subtitlePipeline ?? SubtitlePipeline()
         let loadedProfiles = ProfileManager.shared.loadProfiles()
         self.profiles = loadedProfiles
         self.currentProfile = loadedProfiles.first ?? GameProfile()
@@ -220,54 +223,47 @@ public final class AppState: ObservableObject {
         guard !isOneTimeScanning else { return }
 
         let rect = currentProfile.sourceRect.cgRect
-        guard rect.width > 10 && rect.height > 10 else {
+        guard rect.width >= CodableRect.minWidth && rect.height >= CodableRect.minHeight else {
             statusMessage = "Capture area invalid"
             return
         }
 
         isOneTimeScanning = true
         statusMessage = "Scanning..."
+        isOCRActive = true
+
+        let config = SubtitlePipelineConfig(
+            sourceLanguage: currentProfile.sourceLanguage,
+            targetLanguage: currentProfile.targetLanguage,
+            translationEngineType: currentProfile.translationEngineType,
+            mergeWrappedLines: currentProfile.mergeWrappedLines
+        )
 
         Task { [weak self] in
             guard let self = self else { return }
-            defer { self.isOneTimeScanning = false }
+            defer {
+                self.isOneTimeScanning = false
+                self.isOCRActive = false
+            }
 
             do {
-                let capturedImage = try await self.captureManager.captureRegion(rect: rect)
-                self.isOCRActive = true
+                let output = try await self.subtitlePipeline.process(rect: rect, config: config, force: true)
 
-                let ocrLangs = self.ocrLanguages(for: self.currentProfile.sourceLanguage)
-                let ocrResult = try await self.ocrManager.recognizeText(
-                    in: capturedImage,
-                    recognitionLanguages: ocrLangs,
-                    mergeWrappedLines: self.currentProfile.mergeWrappedLines
-                )
-                self.isOCRActive = false
-
-                let cleanOCR = ocrResult.fullText.trimmingCharacters(in: .whitespacesAndNewlines)
-
-                // If no text was recognized in the captured frame:
-                if cleanOCR.isEmpty {
+                switch output {
+                case .empty:
                     self.statusMessage = "No text detected"
-                    return
+                case .unchanged:
+                    self.statusMessage = "Translated (\(self.currentProfile.sourceLanguage.uppercased()) → \(self.currentProfile.targetLanguage.uppercased()))"
+                    self.isOneTimeSubtitleVisible = true
+                    self.oneTimeScanTriggerCount += 1
+                case let .dialogue(sourceText, translatedText, _):
+                    self.lastRecognizedText = sourceText
+                    self.lastTranslatedText = translatedText
+                    self.statusMessage = "Translated (\(self.currentProfile.sourceLanguage.uppercased()) → \(self.currentProfile.targetLanguage.uppercased()))"
+                    self.isOneTimeSubtitleVisible = true
+                    self.oneTimeScanTriggerCount += 1
                 }
-
-                self.lastRecognizedText = cleanOCR
-                self.statusMessage = "Translating..."
-
-                let translated = try await self.translationCoordinator.translate(
-                    text: cleanOCR,
-                    sourceLanguage: self.currentProfile.sourceLanguage,
-                    targetLanguage: self.currentProfile.targetLanguage,
-                    engineType: self.currentProfile.translationEngineType
-                )
-
-                self.lastTranslatedText = translated
-                self.statusMessage = "Translated (\(self.currentProfile.sourceLanguage.uppercased()) → \(self.currentProfile.targetLanguage.uppercased()))"
-                self.isOneTimeSubtitleVisible = true
-                self.oneTimeScanTriggerCount += 1
             } catch {
-                self.isOCRActive = false
                 self.statusMessage = "Error: \(error.localizedDescription)"
             }
         }
