@@ -166,6 +166,15 @@ public final class OverlayWindowManager: NSObject, NSWindowDelegate {
 
         // Pre-warm settings window so first open is instant — build but do NOT show yet
         preWarmSettings(appState: appState)
+
+        appState.onOpenPreferences = { [weak self, weak appState] in
+            guard let self = self, let appState = appState else { return }
+            self.showSettings(appState: appState)
+        }
+
+        appState.onResetOverlays = { [weak self] profile in
+            self?.updatePanelPositions(from: profile)
+        }
     }
 
     // MARK: - Positioning Keyboard Shortcuts (Escape / Enter)

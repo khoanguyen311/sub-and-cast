@@ -1,71 +1,67 @@
 import SwiftUI
 import Combine
 
+/// Clean presentation model coordinating UI state, pipeline events, shortcuts, and overlay positioning.
 @MainActor
 public final class AppState: ObservableObject {
     public static let shared = AppState()
 
+    // MARK: - Presentation State
     @Published public var profiles: [GameProfile] = []
     @Published public var currentProfile: GameProfile
     @Published public var isScanning: Bool = false
     @Published public var isOneTimeScanning: Bool = false
     @Published public var isOneTimeSubtitleVisible: Bool = false
     @Published public var oneTimeScanTriggerCount: Int = 0
-    @Published public var isLocked: Bool = true // Default to locked
-    @Published public var isOverlaysVisible: Bool = false // Hidden on cold launch
-    @Published public var isPositioningOverlays: Bool = false // True when user clicked "Position Overlays"
+    @Published public var isLocked: Bool = true
+    @Published public var isOverlaysVisible: Bool = false
+    @Published public var isPositioningOverlays: Bool = false
     @Published public var isOCRActive: Bool = false
     @Published public var isDialoguePresent: Bool = false
     @Published public var lastRecognizedText: String = ""
     @Published public var lastTranslatedText: String = ""
     @Published public var statusMessage: String = "Ready"
 
-    // MARK: - AssistiveTouch Settings & State
+    // MARK: - AssistiveTouch Settings
     @Published public var isAssistiveTouchEnabled: Bool {
-        didSet {
-            UserDefaults.standard.set(isAssistiveTouchEnabled, forKey: "assistive_touch_enabled")
-        }
+        didSet { persistPreferences() }
     }
     @Published public var assistiveTouchSingleClick: AssistiveTouchAction {
-        didSet {
-            UserDefaults.standard.set(assistiveTouchSingleClick.rawValue, forKey: "assistive_single_click")
-        }
+        didSet { persistPreferences() }
     }
     @Published public var assistiveTouchDoubleClick: AssistiveTouchAction {
-        didSet {
-            UserDefaults.standard.set(assistiveTouchDoubleClick.rawValue, forKey: "assistive_double_click")
-        }
+        didSet { persistPreferences() }
     }
     @Published public var assistiveTouchLongPress: AssistiveTouchAction {
-        didSet {
-            UserDefaults.standard.set(assistiveTouchLongPress.rawValue, forKey: "assistive_long_press")
-        }
+        didSet { persistPreferences() }
     }
     @Published public var assistiveTouchSize: CGFloat {
-        didSet {
-            UserDefaults.standard.set(Double(assistiveTouchSize), forKey: "assistive_touch_size")
-        }
+        didSet { persistPreferences() }
     }
     @Published public var assistiveTouchIdleOpacity: Double {
-        didSet {
-            UserDefaults.standard.set(assistiveTouchIdleOpacity, forKey: "assistive_touch_idle_opacity")
-        }
+        didSet { persistPreferences() }
     }
     @Published public var isAssistiveQuickMenuOpen: Bool = false
 
+    // MARK: - Injected Core Subsystems
     public var profileStore: ProfileStore
     public var subtitlePipeline: SubtitlePipelineProtocol
     public var shortcutRegistry: ShortcutRegistry
     public var overlayCoordinator: OverlayCoordinator
 
+    public var onOpenPreferences: (() -> Void)?
+    public var onResetOverlays: ((GameProfile) -> Void)?
+
     private var scanTask: Task<Void, Never>?
     private var hotkeyTask: Task<Void, Never>?
+    private let preferencesDefaults: UserDefaults
 
     public init(
         subtitlePipeline: SubtitlePipelineProtocol? = nil,
         profileStore: ProfileStore? = nil,
         shortcutRegistry: ShortcutRegistry? = nil,
-        overlayCoordinator: OverlayCoordinator? = nil
+        overlayCoordinator: OverlayCoordinator? = nil,
+        userDefaults: UserDefaults = .standard
     ) {
         self.subtitlePipeline = subtitlePipeline ?? SubtitlePipeline()
         let store = profileStore ?? ProfileStore.shared
@@ -73,88 +69,58 @@ public final class AppState: ObservableObject {
         let registry = shortcutRegistry ?? ShortcutRegistry.shared
         self.shortcutRegistry = registry
         self.overlayCoordinator = overlayCoordinator ?? OverlayCoordinator.shared
+        self.preferencesDefaults = userDefaults
+
         self.profiles = store.profiles
         self.currentProfile = store.activeProfile
 
-        if UserDefaults.standard.object(forKey: "assistive_touch_enabled") != nil {
-            self.isAssistiveTouchEnabled = UserDefaults.standard.bool(forKey: "assistive_touch_enabled")
-        } else {
-            self.isAssistiveTouchEnabled = true
-        }
-
-        if let raw = UserDefaults.standard.string(forKey: "assistive_single_click"),
-           let action = AssistiveTouchAction(rawValue: raw) {
-            self.assistiveTouchSingleClick = action
-        } else {
-            self.assistiveTouchSingleClick = .oneTimeScan
-        }
-
-        if let raw = UserDefaults.standard.string(forKey: "assistive_double_click"),
-           let action = AssistiveTouchAction(rawValue: raw) {
-            self.assistiveTouchDoubleClick = action
-        } else {
-            self.assistiveTouchDoubleClick = .toggleAutoScan
-        }
-
-        if let raw = UserDefaults.standard.string(forKey: "assistive_long_press"),
-           let action = AssistiveTouchAction(rawValue: raw) {
-            self.assistiveTouchLongPress = action
-        } else {
-            self.assistiveTouchLongPress = .openQuickMenu
-        }
-
-        if UserDefaults.standard.object(forKey: "assistive_touch_size") != nil {
-            let savedSize = CGFloat(UserDefaults.standard.double(forKey: "assistive_touch_size"))
-            self.assistiveTouchSize = min(max(20, savedSize), 100)
-        } else {
-            self.assistiveTouchSize = 40.0
-        }
-
-        if UserDefaults.standard.object(forKey: "assistive_touch_idle_opacity") != nil {
-            let savedOpacity = UserDefaults.standard.double(forKey: "assistive_touch_idle_opacity")
-            self.assistiveTouchIdleOpacity = min(max(0.0, savedOpacity), 1.0)
-        } else {
-            self.assistiveTouchIdleOpacity = 0.30
-        }
+        let prefs = AssistiveTouchPreferences.load(from: userDefaults)
+        self.isAssistiveTouchEnabled = prefs.isEnabled
+        self.assistiveTouchSingleClick = prefs.singleClick
+        self.assistiveTouchDoubleClick = prefs.doubleClick
+        self.assistiveTouchLongPress = prefs.longPress
+        self.assistiveTouchSize = prefs.size
+        self.assistiveTouchIdleOpacity = prefs.idleOpacity
 
         let stream = registry.actionStream
         self.hotkeyTask = Task { @MainActor [weak self] in
             for await action in stream {
                 guard let self = self else { break }
                 switch action {
-                case .toggleScan:
-                    self.toggleScanning()
-                case .togglePositioning:
-                    self.toggleLock()
-                case .oneTimeScan:
-                    self.triggerOneTimeScan()
+                case .toggleScan: self.toggleScanning()
+                case .togglePositioning: self.toggleLock()
+                case .oneTimeScan: self.triggerOneTimeScan()
                 }
             }
         }
     }
 
+    private func persistPreferences() {
+        let prefs = AssistiveTouchPreferences(
+            isEnabled: isAssistiveTouchEnabled,
+            singleClick: assistiveTouchSingleClick,
+            doubleClick: assistiveTouchDoubleClick,
+            longPress: assistiveTouchLongPress,
+            size: assistiveTouchSize,
+            idleOpacity: assistiveTouchIdleOpacity
+        )
+        prefs.save(to: preferencesDefaults)
+    }
+
+    // MARK: - Actions
     public func executeAssistiveAction(_ action: AssistiveTouchAction) {
         switch action {
-        case .oneTimeScan:
-            triggerOneTimeScan()
-        case .toggleAutoScan:
-            toggleScanning()
-        case .togglePositioning:
-            toggleLock()
-        case .openQuickMenu:
-            isAssistiveQuickMenuOpen.toggle()
-        case .openPreferences:
-            OverlayWindowManager.shared.showSettings(appState: self)
-        case .none:
-            break
+        case .oneTimeScan: triggerOneTimeScan()
+        case .toggleAutoScan: toggleScanning()
+        case .togglePositioning: toggleLock()
+        case .openQuickMenu: isAssistiveQuickMenuOpen.toggle()
+        case .openPreferences: onOpenPreferences?()
+        case .none: break
         }
     }
 
     public func startPositioningOverlays() {
-        overlayCoordinator.beginPositioning(
-            sourceRect: currentProfile.sourceRect,
-            displayRect: currentProfile.displayRect
-        )
+        overlayCoordinator.beginPositioning(sourceRect: currentProfile.sourceRect, displayRect: currentProfile.displayRect)
         isOverlaysVisible = true
         isPositioningOverlays = true
         isLocked = false
@@ -165,9 +131,7 @@ public final class AppState: ObservableObject {
         overlayCoordinator.commitPositioning()
         isPositioningOverlays = false
         isLocked = true
-        if !isScanning {
-            isOverlaysVisible = false
-        }
+        if !isScanning { isOverlaysVisible = false }
         isDialoguePresent = false
         lastTranslatedText = ""
         lastRecognizedText = ""
@@ -176,15 +140,13 @@ public final class AppState: ObservableObject {
     }
 
     public func cancelPositioningOverlays() {
-        if let original = overlayCoordinator.cancelPositioning() {
-            currentProfile.sourceRect = original.source
-            currentProfile.displayRect = original.display
+        if let orig = overlayCoordinator.cancelPositioning() {
+            currentProfile.sourceRect = orig.source
+            currentProfile.displayRect = orig.display
         }
         isPositioningOverlays = false
         isLocked = true
-        if !isScanning {
-            isOverlaysVisible = false
-        }
+        if !isScanning { isOverlaysVisible = false }
         isDialoguePresent = false
         lastTranslatedText = ""
         lastRecognizedText = ""
@@ -192,19 +154,11 @@ public final class AppState: ObservableObject {
     }
 
     public func toggleLock() {
-        if isPositioningOverlays {
-            finishPositioningOverlays()
-        } else {
-            startPositioningOverlays()
-        }
+        if isPositioningOverlays { finishPositioningOverlays() } else { startPositioningOverlays() }
     }
 
     public func toggleScanning() {
-        if isScanning {
-            stopScanning()
-        } else {
-            startScanning()
-        }
+        if isScanning { stopScanning() } else { startScanning() }
     }
 
     public func startScanning() {
@@ -213,16 +167,13 @@ public final class AppState: ObservableObject {
         isScanning = true
         statusMessage = "Auto-scan active"
 
-        let rect = currentProfile.sourceRect.cgRect
         let config = SubtitlePipelineConfig(
             sourceLanguage: currentProfile.sourceLanguage,
             targetLanguage: currentProfile.targetLanguage,
             translationEngineType: currentProfile.translationEngineType,
             mergeWrappedLines: currentProfile.mergeWrappedLines
         )
-        let interval = currentProfile.captureIntervalSeconds
-
-        let stream = subtitlePipeline.startScan(rect: rect, config: config, intervalSeconds: interval)
+        let stream = subtitlePipeline.startScan(rect: currentProfile.sourceRect.cgRect, config: config, intervalSeconds: currentProfile.captureIntervalSeconds)
         scanTask = Task { @MainActor [weak self] in
             for await event in stream {
                 guard let self = self, self.isScanning else { break }
@@ -242,11 +193,7 @@ public final class AppState: ObservableObject {
     }
 
     public func triggerOneTimeScan() {
-        // Ignore if auto-scan is active, or if currently positioning overlays, or if already scanning
-        guard !isScanning else { return }
-        guard !isPositioningOverlays else { return }
-        guard !isOneTimeScanning else { return }
-
+        guard !isScanning && !isPositioningOverlays && !isOneTimeScanning else { return }
         let rect = currentProfile.sourceRect.cgRect
         guard rect.width >= CodableRect.minWidth && rect.height >= CodableRect.minHeight else {
             statusMessage = "Capture area invalid"
@@ -263,14 +210,12 @@ public final class AppState: ObservableObject {
             translationEngineType: currentProfile.translationEngineType,
             mergeWrappedLines: currentProfile.mergeWrappedLines
         )
-
         Task { @MainActor [weak self] in
             guard let self = self else { return }
             defer {
                 self.isOneTimeScanning = false
                 self.isOCRActive = false
             }
-
             let event = await self.subtitlePipeline.scanOnce(rect: rect, config: config)
             switch event {
             case .empty:
@@ -292,7 +237,7 @@ public final class AppState: ObservableObject {
     }
 
     public func ocrLanguages(for sourceLanguage: String) -> [String] {
-        return SubtitlePipeline.ocrLanguages(for: sourceLanguage)
+        SubtitlePipeline.ocrLanguages(for: sourceLanguage)
     }
 
     public func testTranslate() {
@@ -316,9 +261,7 @@ public final class AppState: ObservableObject {
     private func consumeSubtitleEvent(_ event: SubtitleEvent) {
         switch event {
         case .unchanged:
-            if !lastRecognizedText.isEmpty {
-                self.isDialoguePresent = true
-            }
+            if !lastRecognizedText.isEmpty { self.isDialoguePresent = true }
         case .empty:
             if isDialoguePresent {
                 self.isDialoguePresent = false
@@ -334,10 +277,11 @@ public final class AppState: ObservableObject {
         }
     }
 
+    // MARK: - Profile & Overlay Updates
     public func scheduleSaveCurrentProfile() {
-        profileStore.updateActiveProfile { [weak self] profile in
+        profileStore.updateActiveProfile { [weak self] p in
             guard let self = self else { return }
-            profile = self.currentProfile
+            p = self.currentProfile
         }
     }
 
@@ -354,16 +298,12 @@ public final class AppState: ObservableObject {
     }
 
     public func updateSourceRect(_ rect: CGRect) {
-        guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
-        currentProfile.sourceRect = CodableRect(cgRect: rect)
-        profileStore.updateActiveProfile { $0.sourceRect = CodableRect(cgRect: rect) }
+        updateSourceRectLive(rect)
         profileStore.flush()
     }
 
     public func updateDisplayRect(_ rect: CGRect) {
-        guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
-        currentProfile.displayRect = CodableRect(cgRect: rect)
-        profileStore.updateActiveProfile { $0.displayRect = CodableRect(cgRect: rect) }
+        updateDisplayRectLive(rect)
         profileStore.flush()
     }
 
@@ -373,9 +313,7 @@ public final class AppState: ObservableObject {
         let captureHeight: CGFloat = 140
         let subtitleHeight: CGFloat = 120
         let centerX = max(0, (screen.width - width) / 2)
-        // Dialogue box lower-mid screen (CoreGraphics top-left origin)
         let captureY = max(0, screen.height * 0.50)
-        // Subtitle output zone near bottom
         let displayY = max(captureY + captureHeight + 10, min(screen.height - subtitleHeight - 20, screen.height * 0.78))
 
         let src = CodableRect(x: centerX, y: captureY, width: width, height: captureHeight)
@@ -383,13 +321,12 @@ public final class AppState: ObservableObject {
 
         currentProfile.sourceRect = src
         currentProfile.displayRect = dst
-
         profileStore.updateActiveProfile {
             $0.sourceRect = src
             $0.displayRect = dst
         }
         profileStore.flush()
-        OverlayWindowManager.shared.updatePanelPositions(from: currentProfile)
+        onResetOverlays?(currentProfile)
         statusMessage = "Overlays Reset to Default"
     }
 
