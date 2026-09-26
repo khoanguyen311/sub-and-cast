@@ -35,6 +35,27 @@ public enum SubtitlePipelineOutput: Sendable, Equatable {
     case dialogue(sourceText: String, translatedText: String, confidence: Float)
 }
 
+// MARK: - Pipeline Event
+
+/// Event emitted by autonomous scanning loops or one-time scan evaluations.
+public enum SubtitleEvent: Sendable, Equatable {
+    case unchanged
+    case empty
+    case dialogue(sourceText: String, translatedText: String, confidence: Float)
+    case error(String)
+
+    public init(from output: SubtitlePipelineOutput) {
+        switch output {
+        case .unchanged:
+            self = .unchanged
+        case .empty:
+            self = .empty
+        case let .dialogue(src, trans, conf):
+            self = .dialogue(sourceText: src, translatedText: trans, confidence: conf)
+        }
+    }
+}
+
 // MARK: - Subtitle Pipeline Protocol
 
 /// Unified interface for executing the capture-diff-OCR-reconstruct-translate loop.
@@ -52,6 +73,63 @@ public protocol SubtitlePipelineProtocol: Sendable {
     ) async throws -> SubtitlePipelineOutput
 
     func reset()
+
+    func startScan(
+        rect: CGRect,
+        config: SubtitlePipelineConfig,
+        intervalSeconds: Double
+    ) -> AsyncStream<SubtitleEvent>
+
+    func scanOnce(
+        rect: CGRect,
+        config: SubtitlePipelineConfig
+    ) async -> SubtitleEvent
+
+    func stopScan()
+}
+
+extension SubtitlePipelineProtocol {
+    public func startScan(
+        rect: CGRect,
+        config: SubtitlePipelineConfig,
+        intervalSeconds: Double
+    ) -> AsyncStream<SubtitleEvent> {
+        reset()
+        return AsyncStream<SubtitleEvent> { continuation in
+            let task = Task {
+                while !Task.isCancelled {
+                    do {
+                        let output = try await self.process(rect: rect, config: config, force: false)
+                        continuation.yield(SubtitleEvent(from: output))
+                    } catch {
+                        continuation.yield(.error(error.localizedDescription))
+                    }
+
+                    let delayNs = UInt64(max(0.2, intervalSeconds) * 1_000_000_000)
+                    try? await Task.sleep(nanoseconds: delayNs)
+                }
+                continuation.finish()
+            }
+
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
+        }
+    }
+
+    public func scanOnce(
+        rect: CGRect,
+        config: SubtitlePipelineConfig
+    ) async -> SubtitleEvent {
+        do {
+            let output = try await process(rect: rect, config: config, force: true)
+            return SubtitleEvent(from: output)
+        } catch {
+            return .error(error.localizedDescription)
+        }
+    }
+
+    public func stopScan() {}
 }
 
 // MARK: - Subtitle Pipeline Implementation
@@ -64,6 +142,7 @@ public final class SubtitlePipeline: SubtitlePipelineProtocol, @unchecked Sendab
     private let imageDiffer: ImageDiffer
     private let ocrManager: VisionOCRManager
     private let lock = NSLock()
+    private var activeScanTask: Task<Void, Never>?
 
     private var _lastRecognizedText: String = ""
     private var _lastTranslatedText: String = ""
@@ -97,6 +176,69 @@ public final class SubtitlePipeline: SubtitlePipelineProtocol, @unchecked Sendab
         self.translationProvider = translationProvider
         self.imageDiffer = imageDiffer
         self.ocrManager = ocrManager
+    }
+
+    /// Starts an autonomous background scanning loop emitting an event stream.
+    public func startScan(
+        rect: CGRect,
+        config: SubtitlePipelineConfig,
+        intervalSeconds: Double
+    ) -> AsyncStream<SubtitleEvent> {
+        stopScan()
+        reset()
+
+        return AsyncStream<SubtitleEvent> { continuation in
+            let task = Task { [weak self] in
+                while !Task.isCancelled {
+                    guard let self = self else { break }
+
+                    do {
+                        let output = try await self.process(rect: rect, config: config, force: false)
+                        continuation.yield(SubtitleEvent(from: output))
+                    } catch {
+                        continuation.yield(.error(error.localizedDescription))
+                    }
+
+                    let delayNs = UInt64(max(0.2, intervalSeconds) * 1_000_000_000)
+                    try? await Task.sleep(nanoseconds: delayNs)
+                }
+                continuation.finish()
+            }
+
+            self.lock.lock()
+            self.activeScanTask = task
+            self.lock.unlock()
+
+            continuation.onTermination = { [weak self] _ in
+                task.cancel()
+                self?.lock.lock()
+                if self?.activeScanTask == task {
+                    self?.activeScanTask = nil
+                }
+                self?.lock.unlock()
+            }
+        }
+    }
+
+    /// Single-shot execution interface bypassing visual diff short-circuiting.
+    public func scanOnce(
+        rect: CGRect,
+        config: SubtitlePipelineConfig
+    ) async -> SubtitleEvent {
+        do {
+            let output = try await process(rect: rect, config: config, force: true)
+            return SubtitleEvent(from: output)
+        } catch {
+            return .error(error.localizedDescription)
+        }
+    }
+
+    /// Stops any active scanning loop.
+    public func stopScan() {
+        lock.lock()
+        defer { lock.unlock() }
+        activeScanTask?.cancel()
+        activeScanTask = nil
     }
 
     /// Resets diff buffers and internal text caches.

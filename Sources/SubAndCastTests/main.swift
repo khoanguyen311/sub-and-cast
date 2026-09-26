@@ -730,6 +730,84 @@ struct TestRunner {
             failed += 1
         }
 
+        // Test 14: SubtitlePipeline Autonomous Scan Engine & AsyncStream Events
+        do {
+            func makeTestImage(text: String, width: Int = 400, height: Int = 80) -> CGImage {
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                let ctx = CGContext(
+                    data: nil,
+                    width: width,
+                    height: height,
+                    bitsPerComponent: 8,
+                    bytesPerRow: width * 4,
+                    space: colorSpace,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+                )!
+                ctx.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 1.0))
+                ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+                if !text.isEmpty {
+                    let font = CTFontCreateWithName("Helvetica" as CFString, 24, nil)
+                    let attributes: [NSAttributedString.Key: Any] = [
+                        .font: font,
+                        .foregroundColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1)
+                    ]
+                    let attrString = CFAttributedStringCreate(nil, text as CFString, attributes as CFDictionary)!
+                    let line = CTLineCreateWithAttributedString(attrString)
+                    ctx.textPosition = CGPoint(x: 10, y: 25)
+                    CTLineDraw(line, ctx)
+                }
+                return ctx.makeImage()!
+            }
+
+            let capture = StaticImageFrameProvider()
+            let translator = MockTranslationProvider(prefix: "TRANSLATED")
+            let pipeline = SubtitlePipeline(captureProvider: capture, translationProvider: translator)
+
+            let config = SubtitlePipelineConfig(sourceLanguage: "en", targetLanguage: "vi")
+            let rect = CGRect(x: 50, y: 50, width: 400, height: 80)
+
+            // Test scanOnce single-shot execution
+            let img1 = makeTestImage(text: "Autonomous Engine")
+            capture.setImages([img1])
+            let singleEvent = await pipeline.scanOnce(rect: rect, config: config)
+            if case let .dialogue(src, trans, _) = singleEvent {
+                assertTest(src.contains("Autonomous Engine"), "pipeline.scanOnce recognizes dialogue text")
+                assertTest(trans.contains("TRANSLATED"), "pipeline.scanOnce translates dialogue text")
+            } else {
+                assertTest(false, "pipeline.scanOnce did not emit .dialogue")
+            }
+
+            // Test startScan event stream
+            let img2 = makeTestImage(text: "Continuous Dialogue")
+            let imgBlank = makeTestImage(text: "")
+            capture.setImages([img2, img2, imgBlank])
+
+            let stream = pipeline.startScan(rect: rect, config: config, intervalSeconds: 0.2)
+            var collectedEvents: [SubtitleEvent] = []
+
+            for await event in stream {
+                collectedEvents.append(event)
+                if collectedEvents.count >= 3 {
+                    pipeline.stopScan()
+                    break
+                }
+            }
+
+            assertTest(collectedEvents.count >= 3, "pipeline.startScan stream yields multiple events")
+            if collectedEvents.count >= 3 {
+                if case let .dialogue(src, _, _) = collectedEvents[0] {
+                    assertTest(src.contains("Continuous Dialogue"), "startScan stream first event is dialogue")
+                } else {
+                    assertTest(false, "startScan stream first event is not dialogue")
+                }
+                assertTest(collectedEvents[1] == .unchanged, "startScan stream second identical event is .unchanged")
+                assertTest(collectedEvents[2] == .empty, "startScan stream blank event is .empty")
+            }
+        } catch {
+            print("  ❌ [FAIL] SubtitlePipeline Stream Tests Error: \(error)")
+            failed += 1
+        }
+
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")
         if failed > 0 {
             exit(1)

@@ -190,23 +190,28 @@ public final class AppState: ObservableObject {
         isOverlaysVisible = true
         isScanning = true
         statusMessage = "Auto-scan active"
-        subtitlePipeline.reset()
 
-        scanTask = Task { [weak self] in
-            while !Task.isCancelled {
+        let rect = currentProfile.sourceRect.cgRect
+        let config = SubtitlePipelineConfig(
+            sourceLanguage: currentProfile.sourceLanguage,
+            targetLanguage: currentProfile.targetLanguage,
+            translationEngineType: currentProfile.translationEngineType,
+            mergeWrappedLines: currentProfile.mergeWrappedLines
+        )
+        let interval = currentProfile.captureIntervalSeconds
+
+        let stream = subtitlePipeline.startScan(rect: rect, config: config, intervalSeconds: interval)
+        scanTask = Task { @MainActor [weak self] in
+            for await event in stream {
                 guard let self = self, self.isScanning else { break }
-
-                await self.performScanCycle()
-
-                let interval = self.currentProfile.captureIntervalSeconds
-                let nanoseconds = UInt64(max(0.2, interval) * 1_000_000_000)
-                try? await Task.sleep(nanoseconds: nanoseconds)
+                self.consumeSubtitleEvent(event)
             }
         }
     }
 
     public func stopScanning() {
         isScanning = false
+        subtitlePipeline.stopScan()
         scanTask?.cancel()
         scanTask = nil
         isDialoguePresent = false
@@ -237,32 +242,29 @@ public final class AppState: ObservableObject {
             mergeWrappedLines: currentProfile.mergeWrappedLines
         )
 
-        Task { [weak self] in
+        Task { @MainActor [weak self] in
             guard let self = self else { return }
             defer {
                 self.isOneTimeScanning = false
                 self.isOCRActive = false
             }
 
-            do {
-                let output = try await self.subtitlePipeline.process(rect: rect, config: config, force: true)
-
-                switch output {
-                case .empty:
-                    self.statusMessage = "No text detected"
-                case .unchanged:
-                    self.statusMessage = "Translated (\(self.currentProfile.sourceLanguage.uppercased()) → \(self.currentProfile.targetLanguage.uppercased()))"
-                    self.isOneTimeSubtitleVisible = true
-                    self.oneTimeScanTriggerCount += 1
-                case let .dialogue(sourceText, translatedText, _):
-                    self.lastRecognizedText = sourceText
-                    self.lastTranslatedText = translatedText
-                    self.statusMessage = "Translated (\(self.currentProfile.sourceLanguage.uppercased()) → \(self.currentProfile.targetLanguage.uppercased()))"
-                    self.isOneTimeSubtitleVisible = true
-                    self.oneTimeScanTriggerCount += 1
-                }
-            } catch {
-                self.statusMessage = "Error: \(error.localizedDescription)"
+            let event = await self.subtitlePipeline.scanOnce(rect: rect, config: config)
+            switch event {
+            case .empty:
+                self.statusMessage = "No text detected"
+            case .unchanged:
+                self.statusMessage = "Translated (\(self.currentProfile.sourceLanguage.uppercased()) → \(self.currentProfile.targetLanguage.uppercased()))"
+                self.isOneTimeSubtitleVisible = true
+                self.oneTimeScanTriggerCount += 1
+            case let .dialogue(sourceText, translatedText, _):
+                self.lastRecognizedText = sourceText
+                self.lastTranslatedText = translatedText
+                self.statusMessage = "Translated (\(self.currentProfile.sourceLanguage.uppercased()) → \(self.currentProfile.targetLanguage.uppercased()))"
+                self.isOneTimeSubtitleVisible = true
+                self.oneTimeScanTriggerCount += 1
+            case let .error(msg):
+                self.statusMessage = "Error: \(msg)"
             }
         }
     }
@@ -274,47 +276,39 @@ public final class AppState: ObservableObject {
     public func testTranslate() {
         isOverlaysVisible = true
         isDialoguePresent = true
-        Task { [weak self] in
-            await self?.performScanCycle(force: true)
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            let rect = self.currentProfile.sourceRect.cgRect
+            guard rect.width >= CodableRect.minWidth, rect.height >= CodableRect.minHeight else { return }
+            let config = SubtitlePipelineConfig(
+                sourceLanguage: self.currentProfile.sourceLanguage,
+                targetLanguage: self.currentProfile.targetLanguage,
+                translationEngineType: self.currentProfile.translationEngineType,
+                mergeWrappedLines: self.currentProfile.mergeWrappedLines
+            )
+            let event = await self.subtitlePipeline.scanOnce(rect: rect, config: config)
+            self.consumeSubtitleEvent(event)
         }
     }
 
-    private func performScanCycle(force: Bool = false) async {
-        let rect = currentProfile.sourceRect.cgRect
-        guard rect.width >= CodableRect.minWidth && rect.height >= CodableRect.minHeight else { return }
-
-        let config = SubtitlePipelineConfig(
-            sourceLanguage: currentProfile.sourceLanguage,
-            targetLanguage: currentProfile.targetLanguage,
-            translationEngineType: currentProfile.translationEngineType,
-            mergeWrappedLines: currentProfile.mergeWrappedLines
-        )
-
-        self.isOCRActive = true
-        defer { self.isOCRActive = false }
-
-        do {
-            let output = try await subtitlePipeline.process(rect: rect, config: config, force: force)
-
-            switch output {
-            case .unchanged:
-                // Unchanged frame: if dialogue was already recognized, keep it present
-                if !lastRecognizedText.isEmpty {
-                    self.isDialoguePresent = true
-                }
-            case .empty:
-                if isDialoguePresent {
-                    self.isDialoguePresent = false
-                    self.lastRecognizedText = ""
-                }
-            case let .dialogue(sourceText, translatedText, _):
+    private func consumeSubtitleEvent(_ event: SubtitleEvent) {
+        switch event {
+        case .unchanged:
+            if !lastRecognizedText.isEmpty {
                 self.isDialoguePresent = true
-                self.lastRecognizedText = sourceText
-                self.lastTranslatedText = translatedText
-                self.statusMessage = "Translated (\(currentProfile.sourceLanguage.uppercased()) → \(currentProfile.targetLanguage.uppercased()))"
             }
-        } catch {
-            self.statusMessage = "Error: \(error.localizedDescription)"
+        case .empty:
+            if isDialoguePresent {
+                self.isDialoguePresent = false
+                self.lastRecognizedText = ""
+            }
+        case let .dialogue(sourceText, translatedText, _):
+            self.isDialoguePresent = true
+            self.lastRecognizedText = sourceText
+            self.lastTranslatedText = translatedText
+            self.statusMessage = "Translated (\(currentProfile.sourceLanguage.uppercased()) → \(currentProfile.targetLanguage.uppercased()))"
+        case let .error(msg):
+            self.statusMessage = "Error: \(msg)"
         }
     }
 
