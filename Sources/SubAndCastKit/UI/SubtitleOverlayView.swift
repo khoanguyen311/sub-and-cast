@@ -118,15 +118,20 @@ public struct SubtitleOverlayView: View {
                     )
                     .allowsHitTesting(false)
 
-                // Top-leading aligned subtitle content with safe inset padding
-                VStack(alignment: .leading, spacing: 6) {
+                // Subtitle content with safe inset padding
+                VStack(alignment: appState.currentProfile.textAlignment == "center" ? .center : .leading, spacing: 6) {
                     Text(!appState.lastTranslatedText.isEmpty ? appState.lastTranslatedText : "Translated subtitles will appear here…")
-                        .font(.system(size: appState.currentProfile.fontSize, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .lineSpacing(4)
-                        .multilineTextAlignment(.leading)
+                        .font(.subtitleFont(
+                            family: appState.currentProfile.fontFamily,
+                            size: appState.currentProfile.fontSize,
+                            isBold: appState.currentProfile.isBold,
+                            isItalic: appState.currentProfile.isItalic
+                        ))
+                        .foregroundColor(Color(hex: appState.currentProfile.textColor))
+                        .lineSpacing(appState.currentProfile.lineSpacing)
+                        .multilineTextAlignment(appState.currentProfile.textAlignment == "center" ? .center : .leading)
                         .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: appState.currentProfile.textAlignment == "center" ? .center : .leading)
                     Spacer(minLength: 0)
                 }
                 .padding(.top, 16)
@@ -157,14 +162,19 @@ public struct SubtitleOverlayView: View {
                         .fill(Color.black.opacity(appState.currentProfile.backgroundOpacity))
                         .shadow(color: .black.opacity(0.5 * appState.currentProfile.backgroundOpacity), radius: 6, x: 0, y: 3)
 
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: appState.currentProfile.textAlignment == "center" ? .center : .leading, spacing: 6) {
                         Text(appState.lastTranslatedText)
-                            .font(.system(size: appState.currentProfile.fontSize, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .lineSpacing(4)
-                            .multilineTextAlignment(.leading)
+                            .font(.subtitleFont(
+                                family: appState.currentProfile.fontFamily,
+                                size: appState.currentProfile.fontSize,
+                                isBold: appState.currentProfile.isBold,
+                                isItalic: appState.currentProfile.isItalic
+                            ))
+                            .foregroundColor(Color(hex: appState.currentProfile.textColor))
+                            .lineSpacing(appState.currentProfile.lineSpacing)
+                            .multilineTextAlignment(appState.currentProfile.textAlignment == "center" ? .center : .leading)
                             .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(maxWidth: .infinity, alignment: appState.currentProfile.textAlignment == "center" ? .center : .leading)
                         Spacer(minLength: 0)
                     }
                     .padding(.top, 16)

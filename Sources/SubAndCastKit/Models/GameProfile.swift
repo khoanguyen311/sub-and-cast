@@ -50,6 +50,18 @@ public struct CodableRect: Codable, Equatable, Sendable {
 }
 
 public struct GameProfile: Codable, Identifiable, Equatable {
+    public static let curatedFontFamilies: [String] = [
+        "System Rounded",
+        "System Default",
+        "System Serif",
+        "System Monospaced",
+        "Helvetica",
+        "Arial",
+        "Georgia",
+        "Futura",
+        "Trebuchet MS"
+    ]
+
     public var id: UUID
     public var name: String
     public var sourceRect: CodableRect
@@ -64,6 +76,12 @@ public struct GameProfile: Codable, Identifiable, Equatable {
     public var mergeWrappedLines: Bool
     public var fontSize: CGFloat
     public var backgroundOpacity: Double
+    public var fontFamily: String
+    public var isBold: Bool
+    public var isItalic: Bool
+    public var textColor: String
+    public var textAlignment: String
+    public var lineSpacing: CGFloat
     public var cloudflareAccountId: String
     public var cloudflareApiToken: String
     public var cloudflareModel: String
@@ -87,6 +105,12 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         mergeWrappedLines: Bool = true,
         fontSize: CGFloat = 20.0,
         backgroundOpacity: Double = 0.85,
+        fontFamily: String = "System Rounded",
+        isBold: Bool = true,
+        isItalic: Bool = false,
+        textColor: String = "#FFFFFF",
+        textAlignment: String = "leading",
+        lineSpacing: CGFloat = 4.0,
         cloudflareAccountId: String = "",
         cloudflareApiToken: String = "",
         cloudflareModel: String = "@cf/meta/llama-3.2-3b-instruct",
@@ -109,6 +133,12 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         self.mergeWrappedLines = mergeWrappedLines
         self.fontSize = fontSize
         self.backgroundOpacity = backgroundOpacity
+        self.fontFamily = fontFamily
+        self.isBold = isBold
+        self.isItalic = isItalic
+        self.textColor = textColor
+        self.textAlignment = textAlignment
+        self.lineSpacing = lineSpacing
         self.cloudflareAccountId = cloudflareAccountId
         self.cloudflareApiToken = cloudflareApiToken
         self.cloudflareModel = cloudflareModel
@@ -134,6 +164,12 @@ public struct GameProfile: Codable, Identifiable, Equatable {
         self.mergeWrappedLines = try container.decodeIfPresent(Bool.self, forKey: .mergeWrappedLines) ?? true
         self.fontSize = try container.decodeIfPresent(CGFloat.self, forKey: .fontSize) ?? 20.0
         self.backgroundOpacity = try container.decodeIfPresent(Double.self, forKey: .backgroundOpacity) ?? 0.85
+        self.fontFamily = try container.decodeIfPresent(String.self, forKey: .fontFamily) ?? "System Rounded"
+        self.isBold = try container.decodeIfPresent(Bool.self, forKey: .isBold) ?? true
+        self.isItalic = try container.decodeIfPresent(Bool.self, forKey: .isItalic) ?? false
+        self.textColor = try container.decodeIfPresent(String.self, forKey: .textColor) ?? "#FFFFFF"
+        self.textAlignment = try container.decodeIfPresent(String.self, forKey: .textAlignment) ?? "leading"
+        self.lineSpacing = try container.decodeIfPresent(CGFloat.self, forKey: .lineSpacing) ?? 4.0
         self.cloudflareAccountId = try container.decodeIfPresent(String.self, forKey: .cloudflareAccountId) ?? ""
         self.cloudflareApiToken = try container.decodeIfPresent(String.self, forKey: .cloudflareApiToken) ?? ""
         self.cloudflareModel = try container.decodeIfPresent(String.self, forKey: .cloudflareModel) ?? "@cf/meta/llama-3.2-3b-instruct"

@@ -200,10 +200,16 @@ public struct CaptureSettingsView: View {
 
                         // Live Subtitle Box preview
                         Text("Xin chào thế giới / Hello World")
-                            .font(.system(size: min(28, appState.currentProfile.fontSize), weight: .medium, design: .rounded))
-                            .foregroundColor(.white)
+                            .font(.subtitleFont(
+                                family: appState.currentProfile.fontFamily,
+                                size: min(28, appState.currentProfile.fontSize),
+                                isBold: appState.currentProfile.isBold,
+                                isItalic: appState.currentProfile.isItalic
+                            ))
+                            .foregroundColor(Color(hex: appState.currentProfile.textColor))
+                            .lineSpacing(appState.currentProfile.lineSpacing)
                             .shadow(color: .black.opacity(0.9), radius: 2, x: 0, y: 1)
-                            .multilineTextAlignment(.center)
+                            .multilineTextAlignment(appState.currentProfile.textAlignment == "center" ? .center : .leading)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
                             .background(
@@ -222,6 +228,82 @@ public struct CaptureSettingsView: View {
                 }
                 .padding(.vertical, 2)
 
+                LabeledContent("Font Family") {
+                    Picker("Font Family", selection: $appState.currentProfile.fontFamily) {
+                        ForEach(GameProfile.curatedFontFamilies, id: \.self) { family in
+                            Text(family).tag(family)
+                        }
+                    }
+                    .labelsHidden()
+                }
+
+                LabeledContent("Text Style") {
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            appState.currentProfile.isBold.toggle()
+                        }) {
+                            Image(systemName: "bold")
+                                .frame(width: 24, height: 20)
+                                .background(appState.currentProfile.isBold ? Color.accentColor.opacity(0.3) : Color.white.opacity(0.1))
+                                .cornerRadius(4)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .strokeBorder(appState.currentProfile.isBold ? Color.accentColor : Color.clear, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .help("Toggle Bold")
+
+                        Button(action: {
+                            appState.currentProfile.isItalic.toggle()
+                        }) {
+                            Image(systemName: "italic")
+                                .frame(width: 24, height: 20)
+                                .background(appState.currentProfile.isItalic ? Color.accentColor.opacity(0.3) : Color.white.opacity(0.1))
+                                .cornerRadius(4)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .strokeBorder(appState.currentProfile.isItalic ? Color.accentColor : Color.clear, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .help("Toggle Italic")
+
+                        Divider()
+                            .frame(height: 16)
+
+                        Button(action: {
+                            appState.currentProfile.textAlignment = "leading"
+                        }) {
+                            Image(systemName: "text.alignleft")
+                                .frame(width: 24, height: 20)
+                                .background(appState.currentProfile.textAlignment == "leading" ? Color.accentColor.opacity(0.3) : Color.white.opacity(0.1))
+                                .cornerRadius(4)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .strokeBorder(appState.currentProfile.textAlignment == "leading" ? Color.accentColor : Color.clear, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .help("Align Left")
+
+                        Button(action: {
+                            appState.currentProfile.textAlignment = "center"
+                        }) {
+                            Image(systemName: "text.aligncenter")
+                                .frame(width: 24, height: 20)
+                                .background(appState.currentProfile.textAlignment == "center" ? Color.accentColor.opacity(0.3) : Color.white.opacity(0.1))
+                                .cornerRadius(4)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .strokeBorder(appState.currentProfile.textAlignment == "center" ? Color.accentColor : Color.clear, lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .help("Align Center")
+                    }
+                }
+
                 LabeledContent("Font Size") {
                     HStack(spacing: 12) {
                         Slider(value: $appState.currentProfile.fontSize, in: 8...36, step: 1)
@@ -229,6 +311,57 @@ public struct CaptureSettingsView: View {
                             .monospacedDigit()
                             .foregroundColor(.secondary)
                             .frame(width: 45, alignment: .trailing)
+                    }
+                }
+
+                LabeledContent("Line Spacing") {
+                    HStack(spacing: 12) {
+                        Slider(value: $appState.currentProfile.lineSpacing, in: 0...16, step: 1)
+                        Text("\(Int(appState.currentProfile.lineSpacing)) pt")
+                            .monospacedDigit()
+                            .foregroundColor(.secondary)
+                            .frame(width: 45, alignment: .trailing)
+                    }
+                }
+
+                LabeledContent("Text Color") {
+                    HStack(spacing: 8) {
+                        let swatches: [(String, String, String)] = [
+                            ("White", "#FFFFFF", "Pure White"),
+                            ("Yellow", "#FDE047", "Classic Yellow"),
+                            ("Green", "#4ADE80", "Mint Green"),
+                            ("Cyan", "#38BDF8", "Ice Cyan")
+                        ]
+
+                        ForEach(swatches, id: \.1) { _, hex, desc in
+                            Button(action: {
+                                appState.currentProfile.textColor = hex
+                            }) {
+                                Circle()
+                                    .fill(Color(hex: hex))
+                                    .frame(width: 18, height: 18)
+                                    .overlay(
+                                        Circle()
+                                            .strokeBorder(
+                                                appState.currentProfile.textColor.uppercased() == hex.uppercased() ? Color.accentColor : Color.white.opacity(0.4),
+                                                lineWidth: appState.currentProfile.textColor.uppercased() == hex.uppercased() ? 2.5 : 1
+                                            )
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .help(desc)
+                        }
+
+                        ColorPicker(
+                            "",
+                            selection: Binding(
+                                get: { Color(hex: appState.currentProfile.textColor) },
+                                set: { appState.currentProfile.textColor = $0.toHex() }
+                            ),
+                            supportsOpacity: false
+                        )
+                        .labelsHidden()
+                        .help("Custom color picker")
                     }
                 }
 
@@ -288,30 +421,5 @@ struct CoordinateField: View {
             Stepper("", value: intBinding, in: range, step: 1)
                 .labelsHidden()
         }
-    }
-}
-
-// MARK: - Color Hex Initializer
-private extension Color {
-    init(hex: String) {
-        let cleanHex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: cleanHex).scanHexInt64(&int)
-        let r, g, b, a: Double
-        switch cleanHex.count {
-        case 6:
-            r = Double((int >> 16) & 0xFF) / 255
-            g = Double((int >> 8) & 0xFF) / 255
-            b = Double(int & 0xFF) / 255
-            a = 1.0
-        case 8:
-            r = Double((int >> 24) & 0xFF) / 255
-            g = Double((int >> 16) & 0xFF) / 255
-            b = Double((int >> 8) & 0xFF) / 255
-            a = Double(int & 0xFF) / 255
-        default:
-            r = 0.12; g = 0.16; b = 0.22; a = 1.0
-        }
-        self.init(.sRGB, red: r, green: g, blue: b, opacity: a)
     }
 }

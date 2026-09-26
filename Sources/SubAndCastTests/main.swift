@@ -49,6 +49,55 @@ struct TestRunner {
             assertTest(defaultProfile.targetLanguage == "vi", "GameProfile default target language is Vietnamese (vi)")
             assertTest(defaultProfile.translationEngineType == "apple", "GameProfile default translation engine is Apple Native")
             assertTest(defaultProfile.ocrEngineType == OCREngine.appleVision.rawValue, "GameProfile default OCR engine is Apple Neural Engine (Vision)")
+            assertTest(defaultProfile.fontFamily == "System Rounded", "GameProfile default fontFamily is System Rounded")
+            assertTest(defaultProfile.isBold == true, "GameProfile default isBold is true")
+            assertTest(defaultProfile.isItalic == false, "GameProfile default isItalic is false")
+            assertTest(defaultProfile.textColor == "#FFFFFF", "GameProfile default textColor is #FFFFFF")
+            assertTest(defaultProfile.textAlignment == "leading", "GameProfile default textAlignment is leading")
+            assertTest(defaultProfile.lineSpacing == 4.0, "GameProfile default lineSpacing is 4.0")
+
+            // Test custom HUD appearance values encoding and decoding
+            let customProfile = GameProfile(
+                name: "Custom HUD Game",
+                fontFamily: "Futura",
+                isBold: false,
+                isItalic: true,
+                textColor: "#FDE047",
+                textAlignment: "center",
+                lineSpacing: 8.0
+            )
+            let customData = try JSONEncoder().encode(customProfile)
+            let decodedCustom = try JSONDecoder().decode(GameProfile.self, from: customData)
+            assertTest(decodedCustom.fontFamily == "Futura", "GameProfile custom fontFamily preserved")
+            assertTest(decodedCustom.isBold == false, "GameProfile custom isBold preserved")
+            assertTest(decodedCustom.isItalic == true, "GameProfile custom isItalic preserved")
+            assertTest(decodedCustom.textColor == "#FDE047", "GameProfile custom textColor preserved")
+            assertTest(decodedCustom.textAlignment == "center", "GameProfile custom textAlignment preserved")
+            assertTest(decodedCustom.lineSpacing == 8.0, "GameProfile custom lineSpacing preserved")
+
+            // Test backward compatibility: decode legacy JSON missing HUD appearance fields
+            let legacyJSON = """
+            {
+                "id": "11111111-2222-3333-4444-555555555555",
+                "name": "Legacy Game",
+                "sourceRect": {"x": 10, "y": 20, "width": 300, "height": 80},
+                "displayRect": {"x": 10, "y": 120, "width": 300, "height": 100},
+                "sourceLanguage": "ja",
+                "targetLanguage": "en",
+                "captureIntervalSeconds": 1.0,
+                "fadeTimeoutSeconds": 4.0,
+                "fontSize": 20.0,
+                "backgroundOpacity": 0.8
+            }
+            """
+            let decodedLegacy = try JSONDecoder().decode(GameProfile.self, from: Data(legacyJSON.utf8))
+            assertTest(decodedLegacy.name == "Legacy Game", "Legacy profile decodes successfully")
+            assertTest(decodedLegacy.fontFamily == "System Rounded", "Legacy profile defaults fontFamily to System Rounded")
+            assertTest(decodedLegacy.isBold == true, "Legacy profile defaults isBold to true")
+            assertTest(decodedLegacy.isItalic == false, "Legacy profile defaults isItalic to false")
+            assertTest(decodedLegacy.textColor == "#FFFFFF", "Legacy profile defaults textColor to #FFFFFF")
+            assertTest(decodedLegacy.textAlignment == "leading", "Legacy profile defaults textAlignment to leading")
+            assertTest(decodedLegacy.lineSpacing == 4.0, "Legacy profile defaults lineSpacing to 4.0")
         } catch {
             print("  ❌ [FAIL] GameProfile Serialization Error: \(error)")
             failed += 1
