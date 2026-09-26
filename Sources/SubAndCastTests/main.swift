@@ -346,6 +346,87 @@ struct TestRunner {
             failed += 1
         }
 
+        // Test 9: Pipeline Adapters (FrameCaptureProvider & TranslationProvider)
+        do {
+            // Test StaticImageFrameProvider FIFO and fallback
+            let colorSpace = CGColorSpaceCreateDeviceGray()
+            var byte0: [UInt8] = [0]
+            let ctx0 = CGContext(data: &byte0, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 1, space: colorSpace, bitmapInfo: CGImageAlphaInfo.none.rawValue)!
+            let imgA = ctx0.makeImage()!
+
+            var byte1: [UInt8] = [255]
+            let ctx1 = CGContext(data: &byte1, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 1, space: colorSpace, bitmapInfo: CGImageAlphaInfo.none.rawValue)!
+            let imgB = ctx1.makeImage()!
+
+            let staticProvider = StaticImageFrameProvider(images: [imgA], defaultImage: imgB)
+            let rect1 = CGRect(x: 10, y: 20, width: 100, height: 50)
+            let captured1 = try await staticProvider.captureRegion(rect: rect1)
+            assertTest(captured1 === imgA, "StaticImageFrameProvider dequeues first image")
+
+            let rect2 = CGRect(x: 30, y: 40, width: 200, height: 80)
+            let captured2 = try await staticProvider.captureRegion(rect: rect2)
+            assertTest(captured2 === imgB, "StaticImageFrameProvider falls back to defaultImage")
+            assertTest(staticProvider.capturedRects.count == 2, "StaticImageFrameProvider records capture rects")
+            assertTest(staticProvider.capturedRects.first == rect1, "StaticImageFrameProvider records exact rect coordinates")
+
+            // Empty provider throws error
+            let emptyProvider = StaticImageFrameProvider()
+            var threwError = false
+            do {
+                _ = try await emptyProvider.captureRegion(rect: rect1)
+            } catch {
+                threwError = true
+            }
+            assertTest(threwError, "StaticImageFrameProvider throws error when empty and no fallback")
+
+            // Test MockTranslationProvider
+            let mockTranslator = MockTranslationProvider(
+                prefix: "VI",
+                canned: ["Hello": "Xin chào"]
+            )
+
+            // Canned translation
+            let t1 = try await mockTranslator.translate(
+                text: "Hello",
+                sourceLanguage: "en",
+                targetLanguage: "vi",
+                engineType: "apple"
+            )
+            assertTest(t1 == "Xin chào", "MockTranslationProvider returns canned translation for known phrase")
+
+            // Prefix translation
+            let t2 = try await mockTranslator.translate(
+                text: "Goodbye",
+                sourceLanguage: "en",
+                targetLanguage: "vi",
+                engineType: "apple"
+            )
+            assertTest(t2 == "VI: Goodbye", "MockTranslationProvider uses prefix for uncanned phrase")
+            assertTest(mockTranslator.callCount == 2, "MockTranslationProvider tracks call count")
+            assertTest(mockTranslator.recordedRequests.count == 2, "MockTranslationProvider records requests")
+            assertTest(mockTranslator.recordedRequests.first?.source == "en", "MockTranslationProvider records source language")
+
+            // Custom handler override
+            mockTranslator.translationHandler = { text, sl, tl, eng in
+                return "HANDLED: \(text)"
+            }
+            let t3 = try await mockTranslator.translate(
+                text: "Test",
+                sourceLanguage: "ja",
+                targetLanguage: "en",
+                engineType: "google_free"
+            )
+            assertTest(t3 == "HANDLED: Test", "MockTranslationProvider executes custom handler override")
+
+            // Protocol conformance checks
+            let _: any FrameCaptureProvider = ScreenCaptureManager()
+            let _: any TranslationProvider = TranslationCoordinator.shared
+            assertTest(true, "ScreenCaptureManager and TranslationCoordinator conform to adapter protocols")
+        } catch {
+            print("  ❌ [FAIL] Pipeline Adapters Error: \(error)")
+            failed += 1
+        }
+
         print("\n🏁 Results: \(passed) passed, \(failed) failed.")
         if failed > 0 {
             exit(1)
